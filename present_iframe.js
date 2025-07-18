@@ -577,20 +577,108 @@ class PrecisionToolkit {
 
     // Project Navigator Methods
     async refreshProjectInfo() {
-        const projectInfo = document.getElementById('current-project');
-        projectInfo.textContent = 'Current Project: Adobe Express Document';
+        try {
+            const projectInfo = await this.sandboxProxy.getProjectInfo();
+            const stats = await this.sandboxProxy.getDocumentStats();
+
+            const projectInfoDiv = document.getElementById('current-project');
+            projectInfoDiv.innerHTML = `
+                <div class="project-details">
+                    <h4>📄 ${projectInfo.name}</h4>
+                    <div class="project-stats">
+                        <span>📊 ${stats.totalElements} elements</span>
+                        <span>📝 ${stats.textElements} text</span>
+                        <span>🔷 ${stats.shapeElements} shapes</span>
+                        <span>🖼️ ${stats.imageElements} images</span>
+                    </div>
+                    <div class="project-meta">
+                        <span>📑 ${projectInfo.pageCount} page(s)</span>
+                        <span>📍 Page ${projectInfo.currentPageIndex + 1} active</span>
+                    </div>
+                </div>
+            `;
+
+            console.log('Project info refreshed:', projectInfo);
+        } catch (error) {
+            console.error('Failed to refresh project info:', error);
+            document.getElementById('current-project').innerHTML = `
+                <div class="project-details">
+                    <h4>📄 Adobe Express Document</h4>
+                    <div class="project-stats">
+                        <span>❌ Unable to load project details</span>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     async listProjectPages() {
-        const pagesDiv = document.getElementById('project-pages');
-        pagesDiv.innerHTML = `
-            <div>Pages in current project:</div>
-            <div class="page-list">
-                <div class="page-item">Page 1 (Current)</div>
-                <div class="page-item">Page 2</div>
-                <div class="page-item">Page 3</div>
-            </div>
-        `;
+        try {
+            const pages = await this.sandboxProxy.getProjectPages();
+            const pagesDiv = document.getElementById('project-pages');
+
+            pagesDiv.innerHTML = `
+                <div class="pages-header">
+                    <h4>📑 Pages in Project</h4>
+                    <button id="refresh-pages" class="small-btn">🔄 Refresh</button>
+                </div>
+                <div class="page-list">
+                    ${pages.map(page => `
+                        <div class="page-item ${page.isCurrent ? 'current-page' : ''}" data-page-index="${page.index}">
+                            <div class="page-info">
+                                <span class="page-name">${page.name}</span>
+                                <span class="page-elements">${page.elementCount} elements</span>
+                            </div>
+                            ${page.isCurrent ? '<span class="current-indicator">📍 Current</span>' : '<button class="navigate-btn">Go to Page</button>'}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // Add navigation handlers
+            pagesDiv.querySelectorAll('.navigate-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const pageIndex = parseInt(e.target.closest('.page-item').dataset.pageIndex);
+                    await this.navigateToPage(pageIndex);
+                });
+            });
+
+            // Add refresh handler
+            document.getElementById('refresh-pages')?.addEventListener('click', async () => {
+                await this.listProjectPages();
+            });
+
+            console.log('Pages listed:', pages.length);
+        } catch (error) {
+            console.error('Failed to list pages:', error);
+            document.getElementById('project-pages').innerHTML = `
+                <div class="pages-header">
+                    <h4>📑 Pages in Project</h4>
+                </div>
+                <div class="page-list">
+                    <div class="page-item error">
+                        <span>❌ Unable to load pages</span>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    async navigateToPage(pageIndex) {
+        try {
+            const success = await this.sandboxProxy.navigateToPage(pageIndex);
+            if (success) {
+                console.log('Navigated to page:', pageIndex);
+                // Refresh the page list to update current page indicator
+                setTimeout(() => this.listProjectPages(), 500);
+            } else {
+                console.log('Page navigation not available or failed');
+                alert('Page navigation is not currently supported in this version of Adobe Express');
+            }
+        } catch (error) {
+            console.error('Failed to navigate to page:', error);
+            alert('Failed to navigate to page');
+        }
     }
 }
 

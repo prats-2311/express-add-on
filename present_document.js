@@ -374,18 +374,28 @@ function start() {
                     y: config.y || 50
                 };
 
-                // Apply color directly during creation if provided
+                editor.context.insertionParent.children.append(textElement);
+
+                // Apply color AFTER adding to document
                 if (config.color) {
                     const color = sandboxApi.parseColor(config.color);
                     if (color) {
-                        textElement.fill = editor.makeColorFill(color);
-                        console.log('Applied color during creation:', config.color, color);
-                    } else {
-                        console.log('Failed to parse color:', config.color);
+                        try {
+                            // Try multiple ways to apply color to text
+                            textElement.fill = editor.makeColorFill(color);
+
+                            // Also try setting text color directly if available
+                            if (textElement.textColor !== undefined) {
+                                textElement.textColor = color;
+                            }
+
+                            console.log('Applied color during creation:', config.color, color);
+                        } catch (e) {
+                            console.log('Error applying color:', e);
+                        }
                     }
                 }
 
-                editor.context.insertionParent.children.append(textElement);
                 console.log('Created text element:', config.text, 'at', config.x, config.y);
                 return textElement.id;
             } catch (error) {
@@ -428,9 +438,34 @@ function start() {
                 if (element) {
                     const color = sandboxApi.parseColor(colorString);
                     if (color) {
-                        element.fill = editor.makeColorFill(color);
-                        console.log('Successfully applied color', colorString, 'to element', elementId);
-                        return true;
+                        try {
+                            // For text elements, try multiple approaches
+                            if (element.text !== undefined) {
+                                // Text element - try both fill and textColor
+                                element.fill = editor.makeColorFill(color);
+
+                                if (element.textColor !== undefined) {
+                                    element.textColor = color;
+                                }
+
+                                // Try setting color on text ranges if available
+                                if (element.textRanges && element.textRanges.length > 0) {
+                                    element.textRanges.forEach(range => {
+                                        if (range.fill !== undefined) {
+                                            range.fill = editor.makeColorFill(color);
+                                        }
+                                    });
+                                }
+                            } else {
+                                // Shape element
+                                element.fill = editor.makeColorFill(color);
+                            }
+
+                            console.log('Successfully applied color', colorString, 'to element', elementId);
+                            return true;
+                        } catch (e) {
+                            console.log('Error in color application:', e);
+                        }
                     } else {
                         console.log('Failed to parse color:', colorString);
                     }
@@ -475,6 +510,114 @@ function start() {
             }
 
             return null;
+        },
+
+        // Project Navigator Methods
+        getProjectInfo: async () => {
+            try {
+                // Use insertionParent instead of page.children
+                const insertionParent = editor.context.insertionParent;
+                let elementCount = 0;
+
+                try {
+                    elementCount = insertionParent.children ? insertionParent.children.length : 0;
+                } catch (e) {
+                    console.log('Could not access insertionParent.children');
+                    elementCount = 0;
+                }
+
+                return {
+                    name: 'Adobe Express Document',
+                    id: 'current-document',
+                    pageCount: 1,
+                    currentPageIndex: 0,
+                    elementCount: elementCount
+                };
+            } catch (error) {
+                console.error('Failed to get project info:', error);
+                return {
+                    name: 'Adobe Express Document',
+                    id: 'current',
+                    pageCount: 1,
+                    currentPageIndex: 0,
+                    elementCount: 0
+                };
+            }
+        },
+
+        getProjectPages: async () => {
+            try {
+                // Use insertionParent instead of page.children
+                const insertionParent = editor.context.insertionParent;
+                let elementCount = 0;
+
+                try {
+                    elementCount = insertionParent.children ? insertionParent.children.length : 0;
+                } catch (e) {
+                    console.log('Could not access insertionParent.children');
+                    elementCount = 0;
+                }
+
+                return [{
+                    id: 'current-page',
+                    name: 'Current Page',
+                    index: 0,
+                    isCurrent: true,
+                    elementCount: elementCount
+                }];
+            } catch (error) {
+                console.error('Failed to get pages:', error);
+                return [{
+                    id: 'page-1',
+                    name: 'Page 1',
+                    index: 0,
+                    isCurrent: true,
+                    elementCount: 0
+                }];
+            }
+        },
+
+        navigateToPage: async (pageIndex) => {
+            try {
+                // Page navigation not available in current SDK
+                console.log('Page navigation not supported in current Adobe Express SDK');
+                return false;
+            } catch (error) {
+                console.error('Failed to navigate to page:', error);
+                return false;
+            }
+        },
+
+        getDocumentStats: async () => {
+            try {
+                // Use insertionParent instead of page.children
+                const insertionParent = editor.context.insertionParent;
+                let elements = [];
+
+                try {
+                    elements = insertionParent.children ? Array.from(insertionParent.children) : [];
+                } catch (e) {
+                    console.log('Could not access insertionParent.children, using empty array');
+                    elements = [];
+                }
+
+                const stats = {
+                    totalElements: elements.length,
+                    textElements: elements.filter(el => el.text !== undefined).length,
+                    shapeElements: elements.filter(el => el.text === undefined && el.fill !== undefined).length,
+                    imageElements: elements.filter(el => el.mediaRectangle !== undefined).length
+                };
+
+                return stats;
+            } catch (error) {
+                console.error('Failed to get document stats:', error);
+                return {
+                    totalElements: 0,
+                    textElements: 0,
+                    shapeElements: 0,
+                    imageElements: 0
+                };
+            }
         }
     };
 
