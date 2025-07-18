@@ -358,6 +358,106 @@ function start() {
                 console.error('Asset data that caused error:', JSON.stringify(assetData, null, 2));
                 return null;
             }
+        },
+
+        createBulkTextElement: (config) => {
+            try {
+                const textElement = editor.createText();
+                textElement.text = config.text || 'Sample Text';
+                textElement.fontSize = config.fontSize || 16;
+
+                if (config.width) textElement.width = config.width;
+                if (config.height) textElement.height = config.height;
+
+                textElement.translation = {
+                    x: config.x || 50,
+                    y: config.y || 50
+                };
+
+                editor.context.insertionParent.children.append(textElement);
+                return textElement.id;
+            } catch (error) {
+                console.error('Failed to create bulk text element:', error);
+                return null;
+            }
+        },
+
+        createBulkRectangle: (config) => {
+            try {
+                const rectangle = editor.createRectangle();
+                rectangle.width = config.width || 100;
+                rectangle.height = config.height || 80;
+                rectangle.translation = {
+                    x: config.x || 50,
+                    y: config.y || 50
+                };
+
+                // Apply color if provided
+                if (config.color) {
+                    const color = this.parseColor(config.color);
+                    if (color) {
+                        rectangle.fill = editor.makeColorFill(color);
+                    }
+                }
+
+                editor.context.insertionParent.children.append(rectangle);
+                return rectangle.id;
+            } catch (error) {
+                console.error('Failed to create bulk rectangle:', error);
+                return null;
+            }
+        },
+
+        applyColorToElement: (elementId, colorString) => {
+            try {
+                const elements = Array.from(editor.context.insertionParent.children);
+                const element = elements.find(el => el.id === elementId);
+
+                if (element) {
+                    const color = this.parseColor(colorString);
+                    if (color) {
+                        element.fill = editor.makeColorFill(color);
+                        return true;
+                    }
+                }
+                return false;
+            } catch (error) {
+                console.error('Failed to apply color:', error);
+                return false;
+            }
+        },
+
+        parseColor: (colorString) => {
+            // Handle common color formats
+            const colorMap = {
+                'red': { red: 1, green: 0, blue: 0, alpha: 1 },
+                'blue': { red: 0, green: 0, blue: 1, alpha: 1 },
+                'green': { red: 0, green: 1, blue: 0, alpha: 1 },
+                'yellow': { red: 1, green: 1, blue: 0, alpha: 1 },
+                'purple': { red: 0.5, green: 0, blue: 0.5, alpha: 1 },
+                'orange': { red: 1, green: 0.5, blue: 0, alpha: 1 },
+                'pink': { red: 1, green: 0.75, blue: 0.8, alpha: 1 }
+            };
+
+            const lowerColor = colorString.toLowerCase();
+            if (colorMap[lowerColor]) {
+                return colorMap[lowerColor];
+            }
+
+            // Handle hex colors
+            if (colorString.startsWith('#')) {
+                const hex = colorString.slice(1);
+                if (hex.length === 6) {
+                    return {
+                        red: parseInt(hex.slice(0, 2), 16) / 255,
+                        green: parseInt(hex.slice(2, 4), 16) / 255,
+                        blue: parseInt(hex.slice(4, 6), 16) / 255,
+                        alpha: 1
+                    };
+                }
+            }
+
+            return null;
         }
     };
 

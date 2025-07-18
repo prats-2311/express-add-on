@@ -409,20 +409,28 @@ class PrecisionToolkit {
             const csv = e.target.result;
             const lines = csv.split('\n').filter(line => line.trim());
             const headers = lines[0].split(',').map(h => h.trim());
-            const data = lines.slice(1, 6).map(line => line.split(',').map(cell => cell.trim()));
+            const allData = lines.slice(1).map(line => line.split(',').map(cell => cell.trim()));
+            const previewData = allData.slice(0, 5); // First 5 rows for preview
 
-            this.displayCsvPreview(headers, data);
-            this.csvData = { headers, data: lines.slice(1).map(line => line.split(',').map(cell => cell.trim())) };
+            // Set csvData BEFORE calling displayCsvPreview
+            this.csvData = { headers, data: allData };
+
+            this.displayCsvPreview(headers, previewData);
         };
         reader.readAsText(file);
     }
 
-    displayCsvPreview(headers, data) {
+    displayCsvPreview(headers, previewData) {
         const preview = document.getElementById('csv-preview');
         const headersDiv = document.getElementById('csv-headers');
         const dataDiv = document.getElementById('csv-data');
 
-        headersDiv.innerHTML = `<strong>Headers:</strong> ${headers.join(', ')}`;
+        const totalRows = this.csvData ? this.csvData.data.length : previewData.length;
+
+        headersDiv.innerHTML = `
+            <strong>Headers (${headers.length}):</strong> ${headers.join(', ')}<br>
+            <strong>Rows:</strong> ${totalRows} (showing first ${Math.min(5, totalRows)})
+        `;
 
         const table = `
             <table class="csv-table">
@@ -430,7 +438,12 @@ class PrecisionToolkit {
                     <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
                 </thead>
                 <tbody>
-                    ${data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+                    ${previewData.map((row, index) => `
+                        <tr>
+                            ${row.map(cell => `<td title="${cell}">${cell.length > 20 ? cell.slice(0, 20) + '...' : cell}</td>`).join('')}
+                        </tr>
+                    `).join('')}
+                    ${totalRows > 5 ? `<tr><td colspan="${headers.length}" style="text-align: center; font-style: italic;">... and ${totalRows - 5} more rows</td></tr>` : ''}
                 </tbody>
             </table>
         `;
@@ -450,8 +463,14 @@ class PrecisionToolkit {
                 <select data-column="${header}">
                     <option value="">Skip</option>
                     <option value="text">Text Content</option>
-                    <option value="title">Title</option>
-                    <option value="color">Color</option>
+                    <option value="title">Title Text</option>
+                    <option value="subtitle">Subtitle Text</option>
+                    <option value="color">Fill Color</option>
+                    <option value="background">Background Color</option>
+                    <option value="width">Element Width</option>
+                    <option value="height">Element Height</option>
+                    <option value="x-position">X Position</option>
+                    <option value="y-position">Y Position</option>
                 </select>
             </div>
         `).join('');
@@ -460,7 +479,10 @@ class PrecisionToolkit {
     }
 
     async generateBulkContent() {
-        if (!this.csvData) return;
+        if (!this.csvData) {
+            alert('Please upload a CSV file first');
+            return;
+        }
 
         const mappings = {};
         document.querySelectorAll('#column-mapping select').forEach(select => {
@@ -469,23 +491,65 @@ class PrecisionToolkit {
             }
         });
 
-        // Generate content for each row
-        for (let i = 0; i < Math.min(this.csvData.data.length, 5); i++) {
-            const row = this.csvData.data[i];
-            let textContent = '';
+        if (Object.keys(mappings).length === 0) {
+            alert('Please map at least one column to an element property');
+            return;
+        }
 
+        const maxItems = Math.min(this.csvData.data.length, 10); // Limit to 10 items
+        let createdElements = 0;
+        let startY = 50; // Starting Y position
+
+        for (let i = 0; i < maxItems; i++) {
+            const row = this.csvData.data[i];
+            const elementData = {};
+
+            // Process each mapped column
             this.csvData.headers.forEach((header, index) => {
-                if (mappings[header] === 'text' || mappings[header] === 'title') {
-                    textContent += row[index] + ' ';
+                if (mappings[header] && row[index]) {
+                    elementData[mappings[header]] = row[index].trim();
                 }
             });
 
-            if (textContent.trim()) {
-                await this.sandboxProxy.createTestText(textContent.trim());
+            // Create elements based on mapped data
+            await this.createElementFromData(elementData, i, startY + (i * 80));
+            createdElements++;
+        }
+
+        alert(`Generated ${createdElements} content variations from CSV data!`);
+    }
+
+    async createElementFromData(data, index, yPosition) {
+        const xPosition = 50 + (index % 3) * 200; // Arrange in columns
+
+        // Create text elements
+        if (data.text || data.title || data.subtitle) {
+            const textContent = data.text || data.title || data.subtitle;
+            const elementId = await this.sandboxProxy.createBulkTextElement({
+                text: textContent,
+                x: xPosition,
+                y: yPosition,
+                fontSize: data.title ? 24 : 16,
+                width: parseInt(data.width) || 150,
+                height: parseInt(data.height) || 40
+            });
+
+            // Apply color if specified
+            if (data.color && elementId) {
+                await this.sandboxProxy.applyColorToElement(elementId, data.color);
             }
         }
 
-        alert(`Generated ${Math.min(this.csvData.data.length, 5)} content items!`);
+        // Create rectangle if we have size/position data but no text
+        if (!data.text && !data.title && !data.subtitle && (data.width || data.height)) {
+            const elementId = await this.sandboxProxy.createBulkRectangle({
+                x: parseInt(data['x-position']) || xPosition,
+                y: parseInt(data['y-position']) || yPosition,
+                width: parseInt(data.width) || 100,
+                height: parseInt(data.height) || 80,
+                color: data.color || data.background
+            });
+        }
     }
 
     // Project Navigator Methods
