@@ -362,11 +362,8 @@ function start() {
 
         createBulkTextElement: (config) => {
             try {
-                // Ensure we have text content before creating
-                const textContent = config.text || 'Sample Text';
-
                 const textElement = editor.createText();
-                textElement.text = textContent;
+                textElement.text = config.text || 'Sample Text';
                 textElement.fontSize = config.fontSize || 16;
 
                 if (config.width) textElement.width = config.width;
@@ -377,9 +374,19 @@ function start() {
                     y: config.y || 50
                 };
 
-                editor.context.insertionParent.children.append(textElement);
+                // Apply color directly during creation if provided
+                if (config.color) {
+                    const color = sandboxApi.parseColor(config.color);
+                    if (color) {
+                        textElement.fill = editor.makeColorFill(color);
+                        console.log('Applied color during creation:', config.color, color);
+                    } else {
+                        console.log('Failed to parse color:', config.color);
+                    }
+                }
 
-                console.log('Created text element:', textContent, 'at', config.x, config.y);
+                editor.context.insertionParent.children.append(textElement);
+                console.log('Created text element:', config.text, 'at', config.x, config.y);
                 return textElement.id;
             } catch (error) {
                 console.error('Failed to create bulk text element:', error);
@@ -422,9 +429,13 @@ function start() {
                     const color = sandboxApi.parseColor(colorString);
                     if (color) {
                         element.fill = editor.makeColorFill(color);
-                        console.log('Applied color', colorString, 'to element', elementId);
+                        console.log('Successfully applied color', colorString, 'to element', elementId);
                         return true;
+                    } else {
+                        console.log('Failed to parse color:', colorString);
                     }
+                } else {
+                    console.log('Element not found with ID:', elementId);
                 }
                 return false;
             } catch (error) {

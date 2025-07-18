@@ -421,61 +421,64 @@ class PrecisionToolkit {
     }
 
     displayCsvPreview(headers, previewData) {
-        const preview = document.getElementById('csv-preview');
         const headersDiv = document.getElementById('csv-headers');
         const dataDiv = document.getElementById('csv-data');
 
-        const totalRows = this.csvData ? this.csvData.data.length : previewData.length;
+        // Show headers
+        headersDiv.innerHTML = `<strong>Headers:</strong> ${headers.join(', ')}`;
 
-        headersDiv.innerHTML = `
-            <strong>Headers (${headers.length}):</strong> ${headers.join(', ')}<br>
-            <strong>Rows:</strong> ${totalRows} (showing first ${Math.min(5, totalRows)})
-        `;
+        // Show preview data
+        const table = document.createElement('table');
+        table.className = 'csv-table';
 
-        const table = `
-            <table class="csv-table">
-                <thead>
-                    <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
-                </thead>
-                <tbody>
-                    ${previewData.map((row, index) => `
-                        <tr>
-                            ${row.map(cell => `<td title="${cell}">${cell.length > 20 ? cell.slice(0, 20) + '...' : cell}</td>`).join('')}
-                        </tr>
-                    `).join('')}
-                    ${totalRows > 5 ? `<tr><td colspan="${headers.length}" style="text-align: center; font-style: italic;">... and ${totalRows - 5} more rows</td></tr>` : ''}
-                </tbody>
-            </table>
-        `;
-        dataDiv.innerHTML = table;
+        // Header row
+        const headerRow = table.insertRow();
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            headerRow.appendChild(th);
+        });
 
-        preview.classList.remove('hidden');
-        this.setupColumnMapping(headers);
+        // Data rows
+        previewData.forEach(row => {
+            const dataRow = table.insertRow();
+            row.forEach(cell => {
+                const td = dataRow.insertCell();
+                td.textContent = cell;
+            });
+        });
+
+        dataDiv.innerHTML = '';
+        dataDiv.appendChild(table);
+
+        // Show mapping controls
+        this.showColumnMapping(headers);
     }
 
-    setupColumnMapping(headers) {
+    showColumnMapping(headers) {
         const mappingDiv = document.getElementById('column-mapping');
-        const controls = document.getElementById('mapping-controls');
+        const mappingControls = document.getElementById('mapping-controls');
 
         mappingDiv.innerHTML = headers.map(header => `
             <div class="column-mapping-item">
                 <label>${header}:</label>
                 <select data-column="${header}">
                     <option value="">Skip</option>
-                    <option value="text">Text Content</option>
-                    <option value="title">Title Text</option>
-                    <option value="subtitle">Subtitle Text</option>
-                    <option value="color">Fill Color</option>
-                    <option value="background">Background Color</option>
-                    <option value="width">Element Width</option>
-                    <option value="height">Element Height</option>
-                    <option value="x-position">X Position</option>
-                    <option value="y-position">Y Position</option>
+                    <option value="text" ${header.toLowerCase().includes('title') || header.toLowerCase().includes('text') ? 'selected' : ''}>Text Content</option>
+                    <option value="title" ${header.toLowerCase() === 'title' ? 'selected' : ''}>Title Text</option>
+                    <option value="subtitle" ${header.toLowerCase() === 'subtitle' ? 'selected' : ''}>Subtitle Text</option>
+                    <option value="color" ${header.toLowerCase() === 'color' || header.toLowerCase() === 'background' ? 'selected' : ''}>Fill Color</option>
+                    <option value="background" ${header.toLowerCase() === 'background' ? 'selected' : ''}>Background Color</option>
+                    <option value="width" ${header.toLowerCase().includes('width') ? 'selected' : ''}>Element Width</option>
+                    <option value="height" ${header.toLowerCase().includes('height') ? 'selected' : ''}>Element Height</option>
+                    <option value="x-position" ${header.toLowerCase().includes('x') || header.toLowerCase().includes('position') ? 'selected' : ''}>X Position</option>
+                    <option value="y-position" ${header.toLowerCase().includes('y') || header.toLowerCase().includes('position') ? 'selected' : ''}>Y Position</option>
                 </select>
             </div>
         `).join('');
 
-        controls.classList.remove('hidden');
+        mappingControls.classList.remove('hidden');
+        document.getElementById('csv-preview').classList.remove('hidden');
     }
 
     async generateBulkContent() {
@@ -526,12 +529,17 @@ class PrecisionToolkit {
     async createElementFromData(data, index, yPosition) {
         const xPosition = 50 + (index % 3) * 200;
 
+        // Debug: log the actual data being processed
+        console.log('Processing row', index, 'with data:', data);
+
         // Create text elements - ensure we have valid text content
         if (data.text || data.title || data.subtitle) {
             const textContent = (data.text || data.title || data.subtitle || '').trim();
 
             if (textContent) {
-                console.log('Creating text element with content:', textContent);
+                // Use either 'color' or 'background' field for color
+                const colorValue = data.color || data.background;
+                console.log('Creating text element with content:', textContent, 'color:', colorValue);
 
                 const elementId = await this.sandboxProxy.createBulkTextElement({
                     text: textContent,
@@ -539,25 +547,31 @@ class PrecisionToolkit {
                     y: parseInt(data['y-position']) || yPosition,
                     fontSize: data.title ? 24 : 16,
                     width: parseInt(data.width) || 150,
-                    height: parseInt(data.height) || 40
+                    height: parseInt(data.height) || 40,
+                    color: colorValue // Pass the color value
                 });
 
-                // Apply color if specified and element was created
-                if (data.color && elementId) {
-                    console.log('Applying color', data.color, 'to element', elementId);
-                    await this.sandboxProxy.applyColorToElement(elementId, data.color);
+                console.log('Element created with ID:', elementId);
+
+                // Additional attempt to apply color if element was created
+                if (colorValue && elementId) {
+                    console.log('Attempting to apply color', colorValue, 'to element', elementId);
+                    const colorResult = await this.sandboxProxy.applyColorToElement(elementId, colorValue);
+                    console.log('Color application result:', colorResult);
                 }
             }
         }
         // Create rectangle if we have size/position data but no text
         else if (data.width || data.height || data['x-position'] || data['y-position']) {
+            const colorValue = data.color || data.background;
             const elementId = await this.sandboxProxy.createBulkRectangle({
                 x: parseInt(data['x-position']) || xPosition,
                 y: parseInt(data['y-position']) || yPosition,
                 width: parseInt(data.width) || 100,
                 height: parseInt(data.height) || 80,
-                color: data.color || data.background
+                color: colorValue
             });
+            console.log('Rectangle created with ID:', elementId);
         }
     }
 
