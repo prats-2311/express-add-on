@@ -105,14 +105,14 @@ class PrecisionToolkit {
         // Add these debug handlers
         document.getElementById('debug-selection')?.addEventListener('click', async () => {
             const selection = await this.sandboxProxy.getSelectedElements();
-            // console.log('Manual selection check:', selection.length);
-            alert(`Selected elements: ${selection.length}`);
+            console.log('Manual selection check:', selection.length);
+            this.showStatusMessage(`Selected elements: ${selection.length}`);
         });
 
         document.getElementById('force-align-left')?.addEventListener('click', async () => {
             const result = await this.sandboxProxy.alignElements('horizontal', 'left');
-            // console.log('Force align result:', result);
-            alert(`Alignment result: ${result}`);
+            console.log('Force align result:', result);
+            this.showStatusMessage(`Alignment result: ${result}`);
         });
 
         // Text Effects Generator
@@ -437,10 +437,11 @@ class PrecisionToolkit {
                     await this.sandboxProxy.flipElement('vertical');
                     break;
             }
-            console.log(`Executed action: ${actionType}`);
+            console.log(`✅ Executed action: ${actionType}`);
+            this.showStatusMessage(`Action "${actionType}" completed successfully`);
         } catch (error) {
-            console.error(`Failed to execute action ${actionType}:`, error);
-            alert(`Action "${actionType}" is not available or failed`);
+            console.error(`❌ Failed to execute action ${actionType}:`, error);
+            this.showStatusMessage(`Action "${actionType}" failed: ${error.message}`, 'error');
         }
     }
 
@@ -462,7 +463,8 @@ class PrecisionToolkit {
         const savedToolbar = toolbarActions.map(action => action.dataset.action);
 
         localStorage.setItem('customToolbar', JSON.stringify(savedToolbar));
-        alert('Toolbar saved successfully!');
+        console.log('✅ Toolbar saved successfully!');
+        this.showStatusMessage('Toolbar saved successfully!');
     }
 
     loadCustomToolbar() {
@@ -866,16 +868,51 @@ class PrecisionToolkit {
             const success = await this.sandboxProxy.navigateToPage(pageIndex);
             if (success) {
                 console.log('Navigated to page:', pageIndex);
+                this.showStatusMessage(`Navigated to page ${pageIndex + 1}`);
                 // Refresh the page list to update current page indicator
                 setTimeout(() => this.listProjectPages(), 500);
             } else {
                 console.log('Page navigation not available or failed');
-                alert('Page navigation is not currently supported in this version of Adobe Express');
+                this.showStatusMessage('Page navigation is not currently supported in this version of Adobe Express', 'error');
             }
         } catch (error) {
             console.error('Failed to navigate to page:', error);
-            alert('Failed to navigate to page');
+            this.showStatusMessage('Failed to navigate to page', 'error');
         }
+    }
+
+    showStatusMessage(message, type = 'success') {
+        // Create or update status message element
+        let statusEl = document.getElementById('status-message');
+        if (!statusEl) {
+            statusEl = document.createElement('div');
+            statusEl.id = 'status-message';
+            statusEl.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                padding: 12px 16px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 1000;
+                max-width: 300px;
+                transition: all 0.3s ease;
+            `;
+            document.body.appendChild(statusEl);
+        }
+
+        // Set message and style
+        statusEl.textContent = message;
+        statusEl.style.backgroundColor = type === 'error' ? '#ffebee' : '#e8f5e8';
+        statusEl.style.color = type === 'error' ? '#c62828' : '#2e7d32';
+        statusEl.style.border = type === 'error' ? '1px solid #ef5350' : '1px solid #66bb6a';
+        statusEl.style.display = 'block';
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, 3000);
     }
 }
 
