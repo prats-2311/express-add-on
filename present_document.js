@@ -362,8 +362,11 @@ function start() {
 
         createBulkTextElement: (config) => {
             try {
+                // Ensure we have text content before creating
+                const textContent = config.text || 'Sample Text';
+
                 const textElement = editor.createText();
-                textElement.text = config.text || 'Sample Text';
+                textElement.text = textContent;
                 textElement.fontSize = config.fontSize || 16;
 
                 if (config.width) textElement.width = config.width;
@@ -375,6 +378,8 @@ function start() {
                 };
 
                 editor.context.insertionParent.children.append(textElement);
+
+                console.log('Created text element:', textContent, 'at', config.x, config.y);
                 return textElement.id;
             } catch (error) {
                 console.error('Failed to create bulk text element:', error);
@@ -392,9 +397,9 @@ function start() {
                     y: config.y || 50
                 };
 
-                // Apply color if provided
+                // Apply color if provided using the parseColor method
                 if (config.color) {
-                    const color = this.parseColor(config.color);
+                    const color = sandboxApi.parseColor(config.color);
                     if (color) {
                         rectangle.fill = editor.makeColorFill(color);
                     }
@@ -414,9 +419,10 @@ function start() {
                 const element = elements.find(el => el.id === elementId);
 
                 if (element) {
-                    const color = this.parseColor(colorString);
+                    const color = sandboxApi.parseColor(colorString);
                     if (color) {
                         element.fill = editor.makeColorFill(color);
+                        console.log('Applied color', colorString, 'to element', elementId);
                         return true;
                     }
                 }

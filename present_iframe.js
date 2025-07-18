@@ -480,7 +480,7 @@ class PrecisionToolkit {
 
     async generateBulkContent() {
         if (!this.csvData) {
-            alert('Please upload a CSV file first');
+            console.error('Please upload a CSV file first');
             return;
         }
 
@@ -492,13 +492,15 @@ class PrecisionToolkit {
         });
 
         if (Object.keys(mappings).length === 0) {
-            alert('Please map at least one column to an element property');
+            console.error('Please map at least one column to an element property');
             return;
         }
 
-        const maxItems = Math.min(this.csvData.data.length, 10); // Limit to 10 items
+        const maxItems = Math.min(this.csvData.data.length, 10);
         let createdElements = 0;
-        let startY = 50; // Starting Y position
+        let startY = 50;
+
+        console.log('Starting bulk generation with mappings:', mappings);
 
         for (let i = 0; i < maxItems; i++) {
             const row = this.csvData.data[i];
@@ -511,37 +513,44 @@ class PrecisionToolkit {
                 }
             });
 
+            console.log('Processing row', i, 'with data:', elementData);
+
             // Create elements based on mapped data
             await this.createElementFromData(elementData, i, startY + (i * 80));
             createdElements++;
         }
 
-        alert(`Generated ${createdElements} content variations from CSV data!`);
+        console.log(`Generated ${createdElements} content variations from CSV data!`);
     }
 
     async createElementFromData(data, index, yPosition) {
-        const xPosition = 50 + (index % 3) * 200; // Arrange in columns
+        const xPosition = 50 + (index % 3) * 200;
 
-        // Create text elements
+        // Create text elements - ensure we have valid text content
         if (data.text || data.title || data.subtitle) {
-            const textContent = data.text || data.title || data.subtitle;
-            const elementId = await this.sandboxProxy.createBulkTextElement({
-                text: textContent,
-                x: xPosition,
-                y: yPosition,
-                fontSize: data.title ? 24 : 16,
-                width: parseInt(data.width) || 150,
-                height: parseInt(data.height) || 40
-            });
+            const textContent = (data.text || data.title || data.subtitle || '').trim();
 
-            // Apply color if specified
-            if (data.color && elementId) {
-                await this.sandboxProxy.applyColorToElement(elementId, data.color);
+            if (textContent) {
+                console.log('Creating text element with content:', textContent);
+
+                const elementId = await this.sandboxProxy.createBulkTextElement({
+                    text: textContent,
+                    x: parseInt(data['x-position']) || xPosition,
+                    y: parseInt(data['y-position']) || yPosition,
+                    fontSize: data.title ? 24 : 16,
+                    width: parseInt(data.width) || 150,
+                    height: parseInt(data.height) || 40
+                });
+
+                // Apply color if specified and element was created
+                if (data.color && elementId) {
+                    console.log('Applying color', data.color, 'to element', elementId);
+                    await this.sandboxProxy.applyColorToElement(elementId, data.color);
+                }
             }
         }
-
         // Create rectangle if we have size/position data but no text
-        if (!data.text && !data.title && !data.subtitle && (data.width || data.height)) {
+        else if (data.width || data.height || data['x-position'] || data['y-position']) {
             const elementId = await this.sandboxProxy.createBulkRectangle({
                 x: parseInt(data['x-position']) || xPosition,
                 y: parseInt(data['y-position']) || yPosition,
