@@ -243,6 +243,61 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Custom Filter Pack Creator -->
+            <div class="section">
+                <h3>🎭 Custom Filter Pack Creator</h3>
+                <div class="control-group">
+                    <label>Image Adjustments:</label>
+                    <div class="filter-controls">
+                        <div class="filter-control">
+                            <label>Brightness:</label>
+                            <input type="range" id="brightness-slider" min="-100" max="100" value="0">
+                            <span id="brightness-value">0</span>
+                        </div>
+                        <div class="filter-control">
+                            <label>Contrast:</label>
+                            <input type="range" id="contrast-slider" min="-100" max="100" value="0">
+                            <span id="contrast-value">0</span>
+                        </div>
+                        <div class="filter-control">
+                            <label>Saturation:</label>
+                            <input type="range" id="saturation-slider" min="-100" max="100" value="0">
+                            <span id="saturation-value">0</span>
+                        </div>
+                        <div class="filter-control">
+                            <label>Blur:</label>
+                            <input type="range" id="blur-slider" min="0" max="20" value="0">
+                            <span id="blur-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Filter Preview:</label>
+                    <div id="filter-preview" class="filter-preview">
+                        <div class="preview-element">Sample Element</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Save Filter:</label>
+                    <div class="input-group">
+                        <input type="text" id="filter-name" placeholder="Enter filter name...">
+                        <button id="save-filter">Save Filter</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="button-group">
+                        <button id="apply-filter">Apply to Selected</button>
+                        <button id="reset-filters">Reset All</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Saved Filters:</label>
+                    <div id="filter-library" class="filter-library">
+                        <!-- Saved filters will appear here -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <script type="module" src="present_iframe.js"></script>

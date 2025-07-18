@@ -682,6 +682,40 @@ function start() {
                 return duplicate.id;
             }
         },
+
+        // Filter application
+        applyImageFilter: async (filterData) => {
+            const selection = Array.from(editor.context.selection);
+            if (selection.length === 0) {
+                return false;
+            }
+
+            let appliedCount = 0;
+
+            for (const element of selection) {
+                try {
+                    // Check if element supports filters (images, shapes with fills)
+                    if (element.fill || element.src) {
+                        // Note: Actual filter application would require advanced image processing
+                        // For now, we'll simulate by adjusting opacity and other available properties
+
+                        if (filterData.brightness !== 0) {
+                            // Simulate brightness by adjusting opacity
+                            const brightnessEffect = 1 + (filterData.brightness / 200);
+                            element.opacity = Math.max(0.1, Math.min(1, element.opacity * brightnessEffect));
+                        }
+
+                        // Log the filter application
+                        console.log('Applied filter to element:', element.id, filterData);
+                        appliedCount++;
+                    }
+                } catch (error) {
+                    console.error('Failed to apply filter to element:', error);
+                }
+            }
+
+            return appliedCount > 0;
+        }
     };
 
     runtime.exposeApi(sandboxApi);

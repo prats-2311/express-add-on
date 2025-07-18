@@ -64,7 +64,7 @@ class PrecisionToolkit {
     showUIEnhancerToolkit() {
         document.getElementById('toolkit-selector').classList.add('hidden');
         document.getElementById('ui-enhancer-toolkit').classList.remove('hidden');
-        this.setupUIEnhancerToolkit();
+        this.setupUIEnhancer();
     }
 
     setupPrecisionToolkit() {
@@ -332,8 +332,26 @@ class PrecisionToolkit {
         this.refreshProjectInfo();
     }
 
-    setupUIEnhancerToolkit() {
+    setupUIEnhancer() {
         this.setupQuickAccessToolbar();
+        this.setupPatternGenerator();
+        this.setupFilterCreator();
+    }
+
+    setupPatternGenerator() {
+        // Pattern generator functionality - placeholder for now
+        console.log('Pattern generator setup - feature coming soon');
+
+        // Add basic setup if pattern generator elements exist
+        const patternButtons = document.querySelectorAll('.pattern-btn');
+        if (patternButtons.length > 0) {
+            patternButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    console.log('Pattern selected:', e.target.dataset.pattern);
+                    this.showStatusMessage('Pattern generator feature coming soon!');
+                });
+            });
+        }
     }
 
     setupQuickAccessToolbar() {
@@ -913,6 +931,193 @@ class PrecisionToolkit {
         setTimeout(() => {
             statusEl.style.display = 'none';
         }, 3000);
+    }
+
+    setupFilterCreator() {
+        // Load saved filters
+        this.loadFilterLibrary();
+
+        // Filter control sliders
+        const sliders = ['brightness', 'contrast', 'saturation', 'blur'];
+        sliders.forEach(filter => {
+            const slider = document.getElementById(`${filter}-slider`);
+            const valueDisplay = document.getElementById(`${filter}-value`);
+
+            if (slider && valueDisplay) {
+                slider.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    valueDisplay.textContent = value;
+                    this.updateFilterPreview();
+                });
+            }
+        });
+
+        // Save filter
+        document.getElementById('save-filter')?.addEventListener('click', () => {
+            this.saveCurrentFilter();
+        });
+
+        // Apply filter to selected elements
+        document.getElementById('apply-filter')?.addEventListener('click', async () => {
+            await this.applyFilterToSelected();
+        });
+
+        // Reset all filters
+        document.getElementById('reset-filters')?.addEventListener('click', () => {
+            this.resetAllFilters();
+        });
+
+        // Initial preview update
+        this.updateFilterPreview();
+    }
+
+    updateFilterPreview() {
+        const brightness = document.getElementById('brightness-slider')?.value || 0;
+        const contrast = document.getElementById('contrast-slider')?.value || 0;
+        const saturation = document.getElementById('saturation-slider')?.value || 0;
+        const blur = document.getElementById('blur-slider')?.value || 0;
+
+        const previewElement = document.querySelector('.preview-element');
+        if (previewElement) {
+            const filters = [];
+
+            if (brightness != 0) filters.push(`brightness(${100 + parseInt(brightness)}%)`);
+            if (contrast != 0) filters.push(`contrast(${100 + parseInt(contrast)}%)`);
+            if (saturation != 0) filters.push(`saturate(${100 + parseInt(saturation)}%)`);
+            if (blur != 0) filters.push(`blur(${blur}px)`);
+
+            previewElement.style.filter = filters.join(' ');
+        }
+    }
+
+    saveCurrentFilter() {
+        const name = document.getElementById('filter-name')?.value.trim();
+        if (!name) {
+            this.showStatusMessage('Please enter a filter name', 'error');
+            return;
+        }
+
+        const filterData = {
+            name: name,
+            brightness: parseInt(document.getElementById('brightness-slider')?.value || 0),
+            contrast: parseInt(document.getElementById('contrast-slider')?.value || 0),
+            saturation: parseInt(document.getElementById('saturation-slider')?.value || 0),
+            blur: parseInt(document.getElementById('blur-slider')?.value || 0),
+            timestamp: new Date().toISOString()
+        };
+
+        const savedFilters = JSON.parse(localStorage.getItem('customFilters') || '[]');
+        savedFilters.push(filterData);
+        localStorage.setItem('customFilters', JSON.stringify(savedFilters));
+
+        document.getElementById('filter-name').value = '';
+        this.loadFilterLibrary();
+        this.showStatusMessage(`Filter "${name}" saved successfully!`);
+    }
+
+    loadFilterLibrary() {
+        const savedFilters = JSON.parse(localStorage.getItem('customFilters') || '[]');
+        const container = document.getElementById('filter-library');
+
+        if (!container) return;
+
+        container.innerHTML = savedFilters.map((filter, index) => `
+            <div class="filter-item" data-index="${index}">
+                <button class="delete-filter" onclick="this.parentElement.remove(); window.toolkit.deleteFilter(${index})">×</button>
+                <div class="filter-name">${filter.name}</div>
+                <div class="filter-values">
+                    B:${filter.brightness} C:${filter.contrast}<br>
+                    S:${filter.saturation} Bl:${filter.blur}
+                </div>
+            </div>
+        `).join('');
+
+        // Add click handlers to apply filters
+        container.querySelectorAll('.filter-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-filter')) return;
+
+                const index = parseInt(item.dataset.index);
+                this.applyFilterFromLibrary(index);
+            });
+        });
+    }
+
+    applyFilterFromLibrary(index) {
+        const savedFilters = JSON.parse(localStorage.getItem('customFilters') || '[]');
+        const filter = savedFilters[index];
+
+        if (filter) {
+            // Update sliders
+            document.getElementById('brightness-slider').value = filter.brightness;
+            document.getElementById('brightness-value').textContent = filter.brightness;
+            document.getElementById('contrast-slider').value = filter.contrast;
+            document.getElementById('contrast-value').textContent = filter.contrast;
+            document.getElementById('saturation-slider').value = filter.saturation;
+            document.getElementById('saturation-value').textContent = filter.saturation;
+            document.getElementById('blur-slider').value = filter.blur;
+            document.getElementById('blur-value').textContent = filter.blur;
+
+            // Update preview
+            this.updateFilterPreview();
+
+            // Highlight selected filter
+            document.querySelectorAll('.filter-item').forEach(item => item.classList.remove('active'));
+            document.querySelector(`[data-index="${index}"]`)?.classList.add('active');
+
+            this.showStatusMessage(`Applied filter: ${filter.name}`);
+        }
+    }
+
+    async applyFilterToSelected() {
+        const brightness = parseInt(document.getElementById('brightness-slider')?.value || 0);
+        const contrast = parseInt(document.getElementById('contrast-slider')?.value || 0);
+        const saturation = parseInt(document.getElementById('saturation-slider')?.value || 0);
+        const blur = parseInt(document.getElementById('blur-slider')?.value || 0);
+
+        try {
+            const result = await this.sandboxProxy.applyImageFilter({
+                brightness,
+                contrast,
+                saturation,
+                blur
+            });
+
+            if (result) {
+                this.showStatusMessage('Filter applied successfully!');
+            } else {
+                this.showStatusMessage('No suitable elements selected for filtering', 'error');
+            }
+        } catch (error) {
+            console.error('Filter application failed:', error);
+            this.showStatusMessage('Filter application failed - feature requires image elements', 'error');
+        }
+    }
+
+    resetAllFilters() {
+        document.getElementById('brightness-slider').value = 0;
+        document.getElementById('brightness-value').textContent = 0;
+        document.getElementById('contrast-slider').value = 0;
+        document.getElementById('contrast-value').textContent = 0;
+        document.getElementById('saturation-slider').value = 0;
+        document.getElementById('saturation-value').textContent = 0;
+        document.getElementById('blur-slider').value = 0;
+        document.getElementById('blur-value').textContent = 0;
+
+        this.updateFilterPreview();
+
+        // Remove active state from filter items
+        document.querySelectorAll('.filter-item').forEach(item => item.classList.remove('active'));
+
+        this.showStatusMessage('All filters reset to default values');
+    }
+
+    deleteFilter(index) {
+        const savedFilters = JSON.parse(localStorage.getItem('customFilters') || '[]');
+        savedFilters.splice(index, 1);
+        localStorage.setItem('customFilters', JSON.stringify(savedFilters));
+        this.loadFilterLibrary();
+        this.showStatusMessage('Filter deleted');
     }
 }
 

@@ -526,3 +526,147 @@ input[type="text"] {
 .toolbar-action .remove-btn:hover {
     background: rgba(255, 255, 255, 0.3);
 }
+
+/* Filter Pack Creator Styles */
+.filter-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.filter-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.filter-control label {
+    min-width: 80px;
+    font-size: 12px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.filter-control input[type="range"] {
+    flex: 1;
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.filter-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #007acc;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.filter-control input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #007acc;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.filter-control span {
+    min-width: 30px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+}
+
+.filter-preview {
+    padding: 16px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.preview-element {
+    display: inline-block;
+    padding: 12px 24px;
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    color: white;
+    font-weight: bold;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.filter-library {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.filter-item {
+    padding: 8px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.filter-item:hover {
+    background: #f0f8ff;
+    border-color: #007acc;
+    transform: translateY(-1px);
+}
+
+.filter-item.active {
+    background: #007acc;
+    color: white;
+    border-color: #005a9e;
+}
+
+.filter-item .filter-name {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.filter-item .filter-values {
+    font-size: 10px;
+    color: #666;
+    line-height: 1.2;
+}
+
+.filter-item.active .filter-values {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.filter-item .delete-filter {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(255, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    cursor: pointer;
+    display: none;
+}
+
+.filter-item:hover .delete-filter {
+    display: block;
+}
