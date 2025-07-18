@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Adobe Express Pro Toolkit</title>
+    <link rel="stylesheet" href="present_css.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Main Navigation -->
+        <div id="toolkit-selector" class="main-nav">
+            <h1>Adobe Express Pro Toolkit</h1>
+            <div class="toolkit-grid">
+                <button class="toolkit-btn" data-toolkit="precision">
+                    🎯 Precision & Consistency
+                </button>
+                <button class="toolkit-btn" data-toolkit="content">
+                    📋 Content & Project Orchestrator
+                </button>
+                <button class="toolkit-btn" data-toolkit="ui-enhancer">
+                    🎨 UI Customizer & Creative Enhancer
+                </button>
+            </div>
+        </div>
+
+        <!-- Toolkit Containers -->
+        <div id="precision-toolkit" class="toolkit hidden">
+            <div class="toolkit-header">
+                <button id="back-to-main" class="back-btn">← Back</button>
+                <h2>🎯 Precision & Consistency Toolkit</h2>
+            </div>
+
+            <!-- Selection Status -->
+            <div id="selection-status" class="status-bar">
+                <span id="selection-count">No elements selected</span>
+            </div>
+
+            <!-- Test Elements Section -->
+            <div class="section">
+                <h3>🧪 Test Elements</h3>
+                <div class="button-group">
+                    <button id="create-test-rect">Rectangle</button>
+                    <button id="create-test-text">Text</button>
+                    <button id="create-test-circle">Circle</button>
+                </div>
+            </div>
+
+            <!-- Alignment & Distribution -->
+            <div class="section" id="alignment-section">
+                <h3>📐 Precision Alignment</h3>
+                <div class="control-group">
+                    <label>Horizontal:</label>
+                    <div class="button-group">
+                        <button class="align-btn" data-direction="horizontal" data-align="left">Left</button>
+                        <button class="align-btn" data-direction="horizontal" data-align="center">Center</button>
+                        <button class="align-btn" data-direction="horizontal" data-align="right">Right</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Vertical:</label>
+                    <div class="button-group">
+                        <button class="align-btn" data-direction="vertical" data-align="top">Top</button>
+                        <button class="align-btn" data-direction="vertical" data-align="middle">Middle</button>
+                        <button class="align-btn" data-direction="vertical" data-align="bottom">Bottom</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Distribution:</label>
+                    <div class="button-group">
+                        <button id="distribute-horizontal" disabled>Distribute H</button>
+                        <button id="distribute-vertical" disabled>Distribute V</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Granular Controls -->
+            <div class="section" id="granular-section">
+                <h3>⚙️ Granular Control</h3>
+                <div class="control-grid">
+                    <div class="control-group">
+                        <label>Position:</label>
+                        <input type="number" id="pos-x" placeholder="X" step="1">
+                        <input type="number" id="pos-y" placeholder="Y" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label>Size:</label>
+                        <input type="number" id="size-width" placeholder="Width" step="1">
+                        <input type="number" id="size-height" placeholder="Height" step="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="content-toolkit" class="toolkit hidden"></div>
+        <div id="ui-enhancer-toolkit" class="toolkit hidden"></div>
+    </div>
+    <script type="module" src="present_iframe.js"></script>
+</body>
+
+</html>
