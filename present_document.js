@@ -211,101 +211,151 @@ function start() {
 
         captureSelectedAsset: () => {
             const selection = Array.from(editor.context.selection);
+            console.log('Capturing asset, selection length:', selection.length);
+
             if (selection.length === 1) {
                 const element = selection[0];
+                console.log('Selected element constructor name:', element.constructor.name);
+
+                // Determine element type more reliably
+                let elementType = 'Unknown';
+                if (element.text !== undefined) {
+                    elementType = 'Text';
+                } else if (element.width !== undefined && element.height !== undefined) {
+                    // Check if it's a circle/ellipse (width === height for circles)
+                    if (element.width === element.height) {
+                        elementType = 'Ellipse';
+                    } else {
+                        elementType = 'Rectangle';
+                    }
+                }
+
+                console.log('Detected element type:', elementType);
 
                 // Capture more detailed element data
                 const assetData = {
                     id: element.id,
-                    type: element.constructor.name,
+                    type: elementType,
                     properties: {
-                        x: element.translation.x,
-                        y: element.translation.y,
+                        x: element.translation ? element.translation.x : 0,
+                        y: element.translation ? element.translation.y : 0,
                         width: element.width || 0,
                         height: element.height || 0
                     }
                 };
 
                 // Add type-specific properties
-                if (element.constructor.name === 'Text') {
-                    assetData.properties.text = element.text || '';
+                if (elementType === 'Text') {
+                    assetData.properties.text = element.text || 'Sample Text';
                     assetData.properties.fontSize = element.fontSize || 16;
+                    console.log('Captured text:', assetData.properties.text);
                 }
 
                 // Try to capture fill color
                 if (element.fill) {
                     try {
-                        // This might not work for all fill types, but we'll try
                         assetData.properties.fillColor = {
                             red: element.fill.color?.red || 0,
                             green: element.fill.color?.green || 0,
                             blue: element.fill.color?.blue || 0,
                             alpha: element.fill.color?.alpha || 1
                         };
+                        console.log('Captured fill color:', assetData.properties.fillColor);
                     } catch (e) {
-                        console.log('Could not capture fill color');
+                        console.log('Could not capture fill color:', e);
                     }
                 }
 
+                console.log('Final captured asset data:', assetData);
                 return assetData;
             }
+
+            console.log('No single element selected');
             return null;
         },
 
         recreateAssetFromTemplate: (assetData) => {
+            console.log('Attempting to recreate asset:', assetData);
+
             try {
+                if (!assetData || !assetData.type) {
+                    console.error('Invalid asset data:', assetData);
+                    return null;
+                }
+
                 let newElement;
 
                 switch (assetData.type) {
                     case 'Text':
+                        console.log('Creating text element...');
                         newElement = editor.createText();
-                        if (assetData.properties.text) {
+
+                        if (assetData.properties && assetData.properties.text) {
                             newElement.text = assetData.properties.text;
+                            console.log('Set text:', assetData.properties.text);
                         }
-                        if (assetData.properties.fontSize) {
+
+                        if (assetData.properties && assetData.properties.fontSize) {
                             newElement.fontSize = assetData.properties.fontSize;
+                            console.log('Set fontSize:', assetData.properties.fontSize);
                         }
                         break;
 
                     case 'Rectangle':
+                        console.log('Creating rectangle element...');
                         newElement = editor.createRectangle();
                         break;
 
                     case 'Ellipse':
+                        console.log('Creating ellipse element...');
                         newElement = editor.createEllipse();
                         break;
 
                     default:
-                        console.log('Unknown element type:', assetData.type);
+                        console.error('Unknown element type:', assetData.type);
                         return null;
                 }
 
                 if (newElement) {
+                    console.log('Element created successfully, setting properties...');
+
                     // Set size
-                    if (assetData.properties.width) newElement.width = assetData.properties.width;
-                    if (assetData.properties.height) newElement.height = assetData.properties.height;
+                    if (assetData.properties && assetData.properties.width) {
+                        newElement.width = assetData.properties.width;
+                        console.log('Set width:', assetData.properties.width);
+                    }
+                    if (assetData.properties && assetData.properties.height) {
+                        newElement.height = assetData.properties.height;
+                        console.log('Set height:', assetData.properties.height);
+                    }
 
                     // Set position (with slight offset so it doesn't overlap exactly)
-                    newElement.translation = {
-                        x: (assetData.properties.x || 0) + 20,
-                        y: (assetData.properties.y || 0) + 20
-                    };
+                    const x = (assetData.properties && assetData.properties.x) ? assetData.properties.x + 20 : 50;
+                    const y = (assetData.properties && assetData.properties.y) ? assetData.properties.y + 20 : 50;
+
+                    newElement.translation = { x, y };
+                    console.log('Set position:', x, y);
 
                     // Try to restore fill color
-                    if (assetData.properties.fillColor) {
+                    if (assetData.properties && assetData.properties.fillColor) {
                         try {
                             newElement.fill = editor.makeColorFill(assetData.properties.fillColor);
+                            console.log('Set fill color:', assetData.properties.fillColor);
                         } catch (e) {
-                            console.log('Could not restore fill color');
+                            console.log('Could not restore fill color:', e);
                         }
                     }
 
                     editor.context.insertionParent.children.append(newElement);
-                    console.log('Recreated element:', assetData.type);
+                    console.log('Element added to document successfully');
                     return newElement.id;
+                } else {
+                    console.error('Failed to create element');
+                    return null;
                 }
             } catch (error) {
-                console.error('Failed to recreate asset:', error);
+                console.error('Failed to recreate asset - detailed error:', error);
+                console.error('Asset data that caused error:', JSON.stringify(assetData, null, 2));
                 return null;
             }
         }
