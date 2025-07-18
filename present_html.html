@@ -47,6 +47,35 @@
                 </div>
             </div>
 
+            <!-- Advanced Text Effects Generator -->
+            <div class="section">
+                <h3>✨ Advanced Text Effects Generator</h3>
+                <div class="control-group">
+                    <label>Text Input:</label>
+                    <input type="text" id="text-input" placeholder="Enter your text..." value="Sample Text">
+                </div>
+                <div class="control-group">
+                    <label>Effect Style:</label>
+                    <div class="button-group effect-buttons">
+                        <button class="effect-btn" data-effect="neon">🌟 Neon Glow</button>
+                        <button class="effect-btn" data-effect="shadow3d">📦 3D Shadow</button>
+                        <button class="effect-btn" data-effect="vintage">🎞️ Vintage</button>
+                        <button class="effect-btn" data-effect="gradient">🌈 Gradient</button>
+                        <button class="effect-btn" data-effect="outline">⭕ Outline</button>
+                        <button class="effect-btn" data-effect="metallic">✨ Metallic</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="button-group">
+                        <button id="preview-text-effect">Preview Effect</button>
+                        <button id="apply-text-effect">Apply to Selected</button>
+                    </div>
+                </div>
+                <div id="text-preview" class="text-preview hidden">
+                    <div id="preview-canvas"></div>
+                </div>
+            </div>
+
             <!-- Debug Tools Section -->
             <div class="section">
                 <h3>🔧 Debug Tools</h3>
@@ -101,7 +130,66 @@
                 </div>
             </div>
         </div>
-        <div id="content-toolkit" class="toolkit hidden"></div>
+        <div id="content-toolkit" class="toolkit hidden">
+            <div class="toolkit-header">
+                <button id="back-to-main-content" class="back-btn">← Back</button>
+                <h2>📋 Content & Project Orchestrator</h2>
+            </div>
+
+            <!-- Advanced Asset Organizer -->
+            <div class="section">
+                <h3>🏷️ Advanced Asset Organizer</h3>
+                <div class="control-group">
+                    <label>Tag Selected Asset:</label>
+                    <div class="input-group">
+                        <input type="text" id="asset-tag-input" placeholder="Enter tag name...">
+                        <button id="add-asset-tag">Add Tag</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Search Assets:</label>
+                    <div class="input-group">
+                        <input type="text" id="asset-search" placeholder="Search by tag or name...">
+                        <button id="search-assets">Search</button>
+                    </div>
+                </div>
+                <div id="asset-library" class="asset-grid">
+                    <!-- Assets will be populated here -->
+                </div>
+            </div>
+
+            <!-- Bulk Content Generator -->
+            <div class="section">
+                <h3>📊 Bulk Content Generator</h3>
+                <div class="control-group">
+                    <label>Upload CSV Data:</label>
+                    <input type="file" id="csv-upload" accept=".csv" class="file-input">
+                </div>
+                <div id="csv-preview" class="csv-preview hidden">
+                    <h4>Data Preview:</h4>
+                    <div id="csv-headers"></div>
+                    <div id="csv-data"></div>
+                </div>
+                <div class="control-group hidden" id="mapping-controls">
+                    <label>Map CSV Columns to Elements:</label>
+                    <div id="column-mapping"></div>
+                    <button id="generate-bulk-content">Generate Content</button>
+                </div>
+            </div>
+
+            <!-- Project Navigator -->
+            <div class="section">
+                <h3>📁 Project Navigator & Dashboard</h3>
+                <div class="button-group">
+                    <button id="refresh-projects">Refresh Projects</button>
+                    <button id="list-pages">List Pages</button>
+                </div>
+                <div id="project-info" class="info-panel">
+                    <div id="current-project">Current Project: Loading...</div>
+                    <div id="project-pages"></div>
+                </div>
+            </div>
+        </div>
         <div id="ui-enhancer-toolkit" class="toolkit hidden"></div>
     </div>
     <script type="module" src="present_iframe.js"></script>

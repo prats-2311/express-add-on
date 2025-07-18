@@ -23,12 +23,18 @@ class PrecisionToolkit {
             btn.addEventListener('click', (e) => {
                 if (e.target.dataset.toolkit === 'precision') {
                     this.showPrecisionToolkit();
+                } else if (e.target.dataset.toolkit === 'content') {
+                    this.showContentToolkit();
                 }
             });
         });
 
-        // Back button
+        // Back buttons
         document.getElementById('back-to-main')?.addEventListener('click', () => {
+            this.showMainMenu();
+        });
+
+        document.getElementById('back-to-main-content')?.addEventListener('click', () => {
             this.showMainMenu();
         });
     }
@@ -36,6 +42,12 @@ class PrecisionToolkit {
     showPrecisionToolkit() {
         document.getElementById('toolkit-selector').classList.add('hidden');
         document.getElementById('precision-toolkit').classList.remove('hidden');
+    }
+
+    showContentToolkit() {
+        document.getElementById('toolkit-selector').classList.add('hidden');
+        document.getElementById('content-toolkit').classList.remove('hidden');
+        this.setupContentToolkit();
     }
 
     showMainMenu() {
@@ -90,6 +102,9 @@ class PrecisionToolkit {
             console.log('Force align result:', result);
             alert(`Alignment result: ${result}`);
         });
+
+        // Text Effects Generator
+        this.setupTextEffects();
     }
 
     setupGranularControls() {
@@ -194,6 +209,266 @@ class PrecisionToolkit {
             document.getElementById('size-width').value = props.width;
             document.getElementById('size-height').value = props.height;
         }
+    }
+
+    setupTextEffects() {
+        let selectedEffect = 'neon';
+
+        // Effect button selection
+        document.querySelectorAll('.effect-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                selectedEffect = e.target.dataset.effect;
+                this.updateTextPreview(selectedEffect);
+            });
+        });
+
+        // Set default active effect
+        document.querySelector('.effect-btn[data-effect="neon"]')?.classList.add('active');
+
+        // Text input changes
+        document.getElementById('text-input')?.addEventListener('input', () => {
+            this.updateTextPreview(selectedEffect);
+        });
+
+        // Preview button
+        document.getElementById('preview-text-effect')?.addEventListener('click', () => {
+            this.updateTextPreview(selectedEffect);
+            document.getElementById('text-preview').classList.remove('hidden');
+        });
+
+        // Apply effect button
+        document.getElementById('apply-text-effect')?.addEventListener('click', async () => {
+            const text = document.getElementById('text-input').value || 'Sample Text';
+            await this.sandboxProxy.createStyledText(text, selectedEffect);
+        });
+
+        // Initial preview
+        this.updateTextPreview(selectedEffect);
+    }
+
+    updateTextPreview(effect) {
+        const text = document.getElementById('text-input').value || 'Sample Text';
+        const preview = document.getElementById('preview-canvas');
+
+        if (preview) {
+            preview.textContent = text;
+            preview.className = `effect-${effect}`;
+            document.getElementById('text-preview').classList.remove('hidden');
+        }
+    }
+
+    setupContentToolkit() {
+        this.setupAssetOrganizer();
+        this.setupBulkGenerator();
+        this.setupProjectNavigator();
+    }
+
+    setupAssetOrganizer() {
+        // Load saved assets from localStorage
+        this.loadAssetLibrary();
+
+        // Add tag to selected asset
+        document.getElementById('add-asset-tag')?.addEventListener('click', () => {
+            const tag = document.getElementById('asset-tag-input').value.trim();
+            if (tag) {
+                this.addAssetTag(tag);
+                document.getElementById('asset-tag-input').value = '';
+            }
+        });
+
+        // Search assets
+        document.getElementById('search-assets')?.addEventListener('click', () => {
+            const query = document.getElementById('asset-search').value.trim();
+            this.searchAssets(query);
+        });
+
+        // Real-time search
+        document.getElementById('asset-search')?.addEventListener('input', (e) => {
+            this.searchAssets(e.target.value.trim());
+        });
+    }
+
+    setupBulkGenerator() {
+        // CSV file upload
+        document.getElementById('csv-upload')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type === 'text/csv') {
+                this.processCsvFile(file);
+            }
+        });
+
+        // Generate bulk content
+        document.getElementById('generate-bulk-content')?.addEventListener('click', () => {
+            this.generateBulkContent();
+        });
+    }
+
+    setupProjectNavigator() {
+        // Refresh projects
+        document.getElementById('refresh-projects')?.addEventListener('click', async () => {
+            await this.refreshProjectInfo();
+        });
+
+        // List pages
+        document.getElementById('list-pages')?.addEventListener('click', async () => {
+            await this.listProjectPages();
+        });
+
+        // Initial load
+        this.refreshProjectInfo();
+    }
+
+    // Asset Organizer Methods
+    addAssetTag(tag) {
+        const assets = JSON.parse(localStorage.getItem('taggedAssets') || '[]');
+        const newAsset = {
+            id: Date.now(),
+            name: `Asset ${assets.length + 1}`,
+            tags: [tag],
+            timestamp: new Date().toISOString()
+        };
+
+        assets.push(newAsset);
+        localStorage.setItem('taggedAssets', JSON.stringify(assets));
+        this.loadAssetLibrary();
+    }
+
+    loadAssetLibrary() {
+        const assets = JSON.parse(localStorage.getItem('taggedAssets') || '[]');
+        const container = document.getElementById('asset-library');
+
+        container.innerHTML = assets.map(asset => `
+            <div class="asset-item" data-id="${asset.id}">
+                <div>${asset.name}</div>
+                <div class="asset-tags">
+                    ${asset.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    searchAssets(query) {
+        const assets = JSON.parse(localStorage.getItem('taggedAssets') || '[]');
+        const filtered = query ? assets.filter(asset =>
+            asset.name.toLowerCase().includes(query.toLowerCase()) ||
+            asset.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
+        ) : assets;
+
+        const container = document.getElementById('asset-library');
+        container.innerHTML = filtered.map(asset => `
+            <div class="asset-item" data-id="${asset.id}">
+                <div>${asset.name}</div>
+                <div class="asset-tags">
+                    ${asset.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // CSV Bulk Generator Methods
+    processCsvFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const csv = e.target.result;
+            const lines = csv.split('\n').filter(line => line.trim());
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = lines.slice(1, 6).map(line => line.split(',').map(cell => cell.trim()));
+
+            this.displayCsvPreview(headers, data);
+            this.csvData = { headers, data: lines.slice(1).map(line => line.split(',').map(cell => cell.trim())) };
+        };
+        reader.readAsText(file);
+    }
+
+    displayCsvPreview(headers, data) {
+        const preview = document.getElementById('csv-preview');
+        const headersDiv = document.getElementById('csv-headers');
+        const dataDiv = document.getElementById('csv-data');
+
+        headersDiv.innerHTML = `<strong>Headers:</strong> ${headers.join(', ')}`;
+
+        const table = `
+            <table class="csv-table">
+                <thead>
+                    <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+                </thead>
+                <tbody>
+                    ${data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+                </tbody>
+            </table>
+        `;
+        dataDiv.innerHTML = table;
+
+        preview.classList.remove('hidden');
+        this.setupColumnMapping(headers);
+    }
+
+    setupColumnMapping(headers) {
+        const mappingDiv = document.getElementById('column-mapping');
+        const controls = document.getElementById('mapping-controls');
+
+        mappingDiv.innerHTML = headers.map(header => `
+            <div class="column-mapping-item">
+                <label>${header}:</label>
+                <select data-column="${header}">
+                    <option value="">Skip</option>
+                    <option value="text">Text Content</option>
+                    <option value="title">Title</option>
+                    <option value="color">Color</option>
+                </select>
+            </div>
+        `).join('');
+
+        controls.classList.remove('hidden');
+    }
+
+    async generateBulkContent() {
+        if (!this.csvData) return;
+
+        const mappings = {};
+        document.querySelectorAll('#column-mapping select').forEach(select => {
+            if (select.value) {
+                mappings[select.dataset.column] = select.value;
+            }
+        });
+
+        // Generate content for each row
+        for (let i = 0; i < Math.min(this.csvData.data.length, 5); i++) {
+            const row = this.csvData.data[i];
+            let textContent = '';
+
+            this.csvData.headers.forEach((header, index) => {
+                if (mappings[header] === 'text' || mappings[header] === 'title') {
+                    textContent += row[index] + ' ';
+                }
+            });
+
+            if (textContent.trim()) {
+                await this.sandboxProxy.createTestText(textContent.trim());
+            }
+        }
+
+        alert(`Generated ${Math.min(this.csvData.data.length, 5)} content items!`);
+    }
+
+    // Project Navigator Methods
+    async refreshProjectInfo() {
+        const projectInfo = document.getElementById('current-project');
+        projectInfo.textContent = 'Current Project: Adobe Express Document';
+    }
+
+    async listProjectPages() {
+        const pagesDiv = document.getElementById('project-pages');
+        pagesDiv.innerHTML = `
+            <div>Pages in current project:</div>
+            <div class="page-list">
+                <div class="page-item">Page 1 (Current)</div>
+                <div class="page-item">Page 2</div>
+                <div class="page-item">Page 3</div>
+            </div>
+        `;
     }
 }
 

@@ -171,6 +171,42 @@ function start() {
                 };
             }
             return null;
+        },
+
+        createStyledText: (text, effect) => {
+            const textElement = editor.createText();
+            textElement.text = text;
+            textElement.translation = { x: Math.random() * 200, y: Math.random() * 200 };
+
+            // Apply effect-specific styling
+            switch (effect) {
+                case 'neon':
+                    textElement.fontSize = 32;
+                    textElement.fill = editor.makeColorFill({ red: 0, green: 1, blue: 1, alpha: 1 });
+                    break;
+                case 'shadow3d':
+                    textElement.fontSize = 28;
+                    textElement.fill = editor.makeColorFill({ red: 0.2, green: 0.2, blue: 0.2, alpha: 1 });
+                    break;
+                case 'vintage':
+                    textElement.fontSize = 30;
+                    textElement.fill = editor.makeColorFill({ red: 0.55, green: 0.27, blue: 0.07, alpha: 1 });
+                    break;
+                case 'gradient':
+                case 'metallic':
+                    textElement.fontSize = 32;
+                    textElement.fill = editor.makeColorFill({ red: 0.4, green: 0.6, blue: 0.8, alpha: 1 });
+                    break;
+                case 'outline':
+                    textElement.fontSize = 32;
+                    textElement.fill = editor.makeColorFill({ red: 0, green: 0, blue: 0, alpha: 1 });
+                    break;
+                default:
+                    textElement.fontSize = 24;
+            }
+
+            editor.context.insertionParent.children.append(textElement);
+            return textElement.id;
         }
     };
 
