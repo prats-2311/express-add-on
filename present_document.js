@@ -618,6 +618,67 @@ function start() {
                     imageElements: 0
                 };
             }
+        },
+
+        // Quick Access Toolbar Actions
+        duplicateSelectedElement: async () => {
+            const selection = Array.from(editor.context.selection);
+            if (selection.length === 0) {
+                throw new Error('No element selected');
+            }
+
+            const element = selection[0];
+            const duplicate = element.clone();
+
+            // Offset the duplicate slightly
+            duplicate.translation = {
+                x: element.translation.x + 20,
+                y: element.translation.y + 20
+            };
+
+            editor.context.insertionParent.children.append(duplicate);
+            return duplicate.id;
+        },
+
+        removeBackground: async () => {
+            // This would require image processing capabilities
+            // For now, we'll show a placeholder message
+            throw new Error('Background removal requires advanced image processing - feature coming soon');
+        },
+
+        cropSelectedImage: async () => {
+            const selection = Array.from(editor.context.selection);
+            if (selection.length === 0) {
+                throw new Error('No element selected');
+            }
+
+            // This would require image cropping capabilities
+            throw new Error('Image cropping requires advanced image processing - feature coming soon');
+        },
+
+        flipElement: async (direction) => {
+            const selection = Array.from(editor.context.selection);
+            if (selection.length === 0) {
+                throw new Error('No element selected');
+            }
+
+            const element = selection[0];
+
+            if (direction === 'horizontal') {
+                // Flip horizontally by scaling X by -1
+                element.transform = {
+                    ...element.transform,
+                    scaleX: (element.transform?.scaleX || 1) * -1
+                };
+            } else if (direction === 'vertical') {
+                // Flip vertically by scaling Y by -1
+                element.transform = {
+                    ...element.transform,
+                    scaleY: (element.transform?.scaleY || 1) * -1
+                };
+            }
+
+            return element.id;
         }
     };
 

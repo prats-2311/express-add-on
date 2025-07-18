@@ -25,6 +25,8 @@ class PrecisionToolkit {
                     this.showPrecisionToolkit();
                 } else if (e.target.dataset.toolkit === 'content') {
                     this.showContentToolkit();
+                } else if (e.target.dataset.toolkit === 'ui-enhancer') {
+                    this.showUIEnhancerToolkit();
                 }
             });
         });
@@ -35,6 +37,10 @@ class PrecisionToolkit {
         });
 
         document.getElementById('back-to-main-content')?.addEventListener('click', () => {
+            this.showMainMenu();
+        });
+
+        document.getElementById('back-to-main-ui')?.addEventListener('click', () => {
             this.showMainMenu();
         });
     }
@@ -53,6 +59,12 @@ class PrecisionToolkit {
     showMainMenu() {
         document.querySelectorAll('.toolkit').forEach(t => t.classList.add('hidden'));
         document.getElementById('toolkit-selector').classList.remove('hidden');
+    }
+
+    showUIEnhancerToolkit() {
+        document.getElementById('toolkit-selector').classList.add('hidden');
+        document.getElementById('ui-enhancer-toolkit').classList.remove('hidden');
+        this.setupUIEnhancerToolkit();
     }
 
     setupPrecisionToolkit() {
@@ -318,6 +330,191 @@ class PrecisionToolkit {
 
         // Initial load
         this.refreshProjectInfo();
+    }
+
+    setupUIEnhancerToolkit() {
+        this.setupQuickAccessToolbar();
+    }
+
+    setupQuickAccessToolbar() {
+        // Load saved toolbar
+        this.loadCustomToolbar();
+
+        // Action button selection
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.addToToolbar(e.currentTarget.dataset.action);
+            });
+        });
+
+        // Toolbar management
+        document.getElementById('save-toolbar')?.addEventListener('click', () => {
+            this.saveCustomToolbar();
+        });
+
+        document.getElementById('reset-toolbar')?.addEventListener('click', () => {
+            this.resetCustomToolbar();
+        });
+
+        // Setup drag and drop
+        this.setupToolbarDragDrop();
+    }
+
+    addToToolbar(actionType) {
+        const toolbar = document.getElementById('custom-toolbar');
+        const placeholder = toolbar.querySelector('.toolbar-placeholder');
+
+        // Remove placeholder if it exists
+        if (placeholder) {
+            placeholder.remove();
+        }
+
+        // Check if action already exists
+        if (toolbar.querySelector(`[data-action="${actionType}"]`)) {
+            return;
+        }
+
+        // Get action details
+        const actionBtn = document.querySelector(`.action-btn[data-action="${actionType}"]`);
+        const icon = actionBtn.querySelector('.action-icon').textContent;
+        const label = actionBtn.querySelector('.action-label').textContent;
+
+        // Create toolbar action
+        const toolbarAction = document.createElement('div');
+        toolbarAction.className = 'toolbar-action';
+        toolbarAction.dataset.action = actionType;
+        toolbarAction.innerHTML = `
+            <span>${icon}</span>
+            <span>${label}</span>
+            <button class="remove-btn">×</button>
+        `;
+
+        // Add click handler for the action
+        toolbarAction.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('remove-btn')) {
+                this.executeToolbarAction(actionType);
+            }
+        });
+
+        // Add remove handler
+        toolbarAction.querySelector('.remove-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toolbarAction.remove();
+            this.updateActionButtonStates();
+
+            // Add placeholder back if toolbar is empty
+            if (toolbar.children.length === 0) {
+                toolbar.innerHTML = '<div class="toolbar-placeholder">Drag actions here to build your toolbar</div>';
+            }
+        });
+
+        toolbar.appendChild(toolbarAction);
+        this.updateActionButtonStates();
+    }
+
+    async executeToolbarAction(actionType) {
+        try {
+            switch (actionType) {
+                case 'duplicate':
+                    await this.sandboxProxy.duplicateSelectedElement();
+                    break;
+                case 'remove-bg':
+                    await this.sandboxProxy.removeBackground();
+                    break;
+                case 'add-text':
+                    await this.sandboxProxy.createTestText();
+                    break;
+                case 'add-shape':
+                    await this.sandboxProxy.createTestRectangle();
+                    break;
+                case 'crop-image':
+                    await this.sandboxProxy.cropSelectedImage();
+                    break;
+                case 'flip-horizontal':
+                    await this.sandboxProxy.flipElement('horizontal');
+                    break;
+                case 'flip-vertical':
+                    await this.sandboxProxy.flipElement('vertical');
+                    break;
+            }
+            console.log(`Executed action: ${actionType}`);
+        } catch (error) {
+            console.error(`Failed to execute action ${actionType}:`, error);
+            alert(`Action "${actionType}" is not available or failed`);
+        }
+    }
+
+    updateActionButtonStates() {
+        const toolbarActions = document.querySelectorAll('#custom-toolbar .toolbar-action');
+        const usedActions = Array.from(toolbarActions).map(action => action.dataset.action);
+
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            if (usedActions.includes(btn.dataset.action)) {
+                btn.classList.add('in-toolbar');
+            } else {
+                btn.classList.remove('in-toolbar');
+            }
+        });
+    }
+
+    saveCustomToolbar() {
+        const toolbarActions = Array.from(document.querySelectorAll('#custom-toolbar .toolbar-action'));
+        const savedToolbar = toolbarActions.map(action => action.dataset.action);
+
+        localStorage.setItem('customToolbar', JSON.stringify(savedToolbar));
+        alert('Toolbar saved successfully!');
+    }
+
+    loadCustomToolbar() {
+        const savedToolbar = JSON.parse(localStorage.getItem('customToolbar') || '[]');
+
+        if (savedToolbar.length > 0) {
+            // Clear current toolbar
+            document.getElementById('custom-toolbar').innerHTML = '';
+
+            // Add saved actions
+            savedToolbar.forEach(actionType => {
+                this.addToToolbar(actionType);
+            });
+        }
+    }
+
+    resetCustomToolbar() {
+        document.getElementById('custom-toolbar').innerHTML =
+            '<div class="toolbar-placeholder">Drag actions here to build your toolbar</div>';
+        this.updateActionButtonStates();
+        localStorage.removeItem('customToolbar');
+    }
+
+    setupToolbarDragDrop() {
+        const toolbar = document.getElementById('custom-toolbar');
+
+        // Make action buttons draggable
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.draggable = true;
+
+            btn.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', btn.dataset.action);
+            });
+        });
+
+        // Setup drop zone
+        toolbar.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            toolbar.classList.add('drag-over');
+        });
+
+        toolbar.addEventListener('dragleave', () => {
+            toolbar.classList.remove('drag-over');
+        });
+
+        toolbar.addEventListener('drop', (e) => {
+            e.preventDefault();
+            toolbar.classList.remove('drag-over');
+
+            const actionType = e.dataTransfer.getData('text/plain');
+            this.addToToolbar(actionType);
+        });
     }
 
     // Asset Organizer Methods

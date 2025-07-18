@@ -190,7 +190,60 @@
                 </div>
             </div>
         </div>
-        <div id="ui-enhancer-toolkit" class="toolkit hidden"></div>
+        <div id="ui-enhancer-toolkit" class="toolkit hidden">
+            <div class="toolkit-header">
+                <button id="back-to-main-ui" class="back-btn">← Back</button>
+                <h2>🎨 UI Customizer & Creative Enhancer</h2>
+            </div>
+
+            <!-- Customizable Quick Access Toolbar -->
+            <div class="section">
+                <h3>⚡ Customizable Quick Access Toolbar</h3>
+                <div class="control-group">
+                    <label>Available Actions:</label>
+                    <div class="action-selection-grid">
+                        <button class="action-btn" data-action="duplicate">
+                            <span class="action-icon">📋</span>
+                            <span class="action-label">Duplicate Element</span>
+                        </button>
+                        <button class="action-btn" data-action="remove-bg">
+                            <span class="action-icon">🖼️</span>
+                            <span class="action-label">Remove Background</span>
+                        </button>
+                        <button class="action-btn" data-action="add-text">
+                            <span class="action-icon">📝</span>
+                            <span class="action-label">Add Text</span>
+                        </button>
+                        <button class="action-btn" data-action="add-shape">
+                            <span class="action-icon">🔷</span>
+                            <span class="action-label">Add Shape</span>
+                        </button>
+                        <button class="action-btn" data-action="crop-image">
+                            <span class="action-icon">✂️</span>
+                            <span class="action-label">Crop Image</span>
+                        </button>
+                        <button class="action-btn" data-action="flip-horizontal">
+                            <span class="action-icon">↔️</span>
+                            <span class="action-label">Flip Horizontal</span>
+                        </button>
+                        <button class="action-btn" data-action="flip-vertical">
+                            <span class="action-icon">↕️</span>
+                            <span class="action-label">Flip Vertical</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Your Custom Toolbar:</label>
+                    <div id="custom-toolbar" class="custom-toolbar">
+                        <div class="toolbar-placeholder">Drag actions here to build your toolbar</div>
+                    </div>
+                    <div class="button-group">
+                        <button id="save-toolbar">💾 Save Toolbar</button>
+                        <button id="reset-toolbar">🔄 Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <script type="module" src="present_iframe.js"></script>
 </body>

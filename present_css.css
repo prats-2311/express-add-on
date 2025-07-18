@@ -416,3 +416,113 @@ input[type="text"] {
     border-color: #f44336;
     color: #d32f2f;
 }
+
+/* Quick Access Toolbar Styles */
+.action-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 8px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 70px;
+}
+
+.action-btn:hover {
+    border-color: #007acc;
+    background: #e3f2fd;
+    transform: translateY(-2px);
+}
+
+.action-btn.selected {
+    border-color: #007acc;
+    background: #007acc;
+    color: white;
+}
+
+.action-btn.in-toolbar {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.action-label {
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.custom-toolbar {
+    min-height: 80px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fafafa;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.custom-toolbar.drag-over {
+    border-color: #007acc;
+    background: #e3f2fd;
+}
+
+.toolbar-placeholder {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    width: 100%;
+}
+
+.toolbar-action {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #007acc;
+    color: white;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    position: relative;
+}
+
+.toolbar-action:hover {
+    background: #005a9e;
+}
+
+.toolbar-action .remove-btn {
+    margin-left: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toolbar-action .remove-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
