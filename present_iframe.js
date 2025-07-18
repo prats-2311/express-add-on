@@ -93,13 +93,13 @@ class PrecisionToolkit {
         // Add these debug handlers
         document.getElementById('debug-selection')?.addEventListener('click', async () => {
             const selection = await this.sandboxProxy.getSelectedElements();
-            console.log('Manual selection check:', selection.length);
+            // console.log('Manual selection check:', selection.length);
             alert(`Selected elements: ${selection.length}`);
         });
 
         document.getElementById('force-align-left')?.addEventListener('click', async () => {
             const result = await this.sandboxProxy.alignElements('horizontal', 'left');
-            console.log('Force align result:', result);
+            // console.log('Force align result:', result);
             alert(`Alignment result: ${result}`);
         });
 
@@ -148,7 +148,7 @@ class PrecisionToolkit {
         this.selectionMonitor = setInterval(async () => {
             try {
                 const selection = await this.sandboxProxy.getSelectedElements();
-                console.log('UI: Selection detected:', selection.length);
+                // console.log('UI: Selection detected:', selection.length);
                 this.updateSelectionUI(selection);
 
                 // Update granular controls for single selection
@@ -157,7 +157,7 @@ class PrecisionToolkit {
                     this.updateGranularInputs(props);
                 }
             } catch (error) {
-                console.log('Selection monitoring error:', error);
+                // console.log('Selection monitoring error:', error);
             }
         }, 500);
     }
@@ -174,13 +174,13 @@ class PrecisionToolkit {
             statusEl.textContent = `${count} elements selected`;
         }
 
-        console.log('Updating UI for', count, 'selected elements');
+        // console.log('Updating UI for', count, 'selected elements');
 
         // Enable/disable alignment buttons
         const alignButtons = document.querySelectorAll('.align-btn');
         alignButtons.forEach(btn => {
             btn.disabled = count < 2;
-            console.log('Align button', btn.textContent, 'disabled:', btn.disabled);
+            // console.log('Align button', btn.textContent, 'disabled:', btn.disabled);
         });
 
         // Enable/disable distribution buttons
@@ -188,11 +188,11 @@ class PrecisionToolkit {
         const distributeV = document.getElementById('distribute-vertical');
         if (distributeH) {
             distributeH.disabled = count < 3;
-            console.log('Distribute H disabled:', distributeH.disabled);
+            // console.log('Distribute H disabled:', distributeH.disabled);
         }
         if (distributeV) {
             distributeV.disabled = count < 3;
-            console.log('Distribute V disabled:', distributeV.disabled);
+            // console.log('Distribute V disabled:', distributeV.disabled);
         }
 
         // Enable/disable granular controls
@@ -270,10 +270,10 @@ class PrecisionToolkit {
         this.loadAssetLibrary();
 
         // Add tag to selected asset
-        document.getElementById('add-asset-tag')?.addEventListener('click', () => {
+        document.getElementById('add-asset-tag')?.addEventListener('click', async () => {
             const tag = document.getElementById('asset-tag-input').value.trim();
             if (tag) {
-                this.addAssetTag(tag);
+                await this.addAssetTag(tag);
                 document.getElementById('asset-tag-input').value = '';
             }
         });
@@ -321,18 +321,28 @@ class PrecisionToolkit {
     }
 
     // Asset Organizer Methods
-    addAssetTag(tag) {
+    async addAssetTag(tag) {
+        // Try to capture selected element first
+        const selectedAsset = await this.sandboxProxy.captureSelectedAsset();
+
         const assets = JSON.parse(localStorage.getItem('taggedAssets') || '[]');
         const newAsset = {
             id: Date.now(),
-            name: `Asset ${assets.length + 1}`,
+            name: selectedAsset ? `${selectedAsset.type} Element` : `Asset ${assets.length + 1}`,
             tags: [tag],
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            elementData: selectedAsset // Store the actual element data
         };
 
         assets.push(newAsset);
         localStorage.setItem('taggedAssets', JSON.stringify(assets));
         this.loadAssetLibrary();
+
+        if (selectedAsset) {
+            console.log('Captured asset:', selectedAsset);
+        } else {
+            console.log('No element selected, created placeholder asset');
+        }
     }
 
     loadAssetLibrary() {
@@ -340,13 +350,22 @@ class PrecisionToolkit {
         const container = document.getElementById('asset-library');
 
         container.innerHTML = assets.map(asset => `
-            <div class="asset-item" data-id="${asset.id}">
+            <div class="asset-item" data-id="${asset.id}" style="cursor: pointer;">
                 <div>${asset.name}</div>
                 <div class="asset-tags">
                     ${asset.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
                 </div>
+                ${asset.elementData ? '<div style="font-size: 10px; color: #666;">Click to recreate</div>' : ''}
             </div>
         `).join('');
+
+        // Add click handlers to recreate assets
+        container.querySelectorAll('.asset-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const assetId = parseInt(item.dataset.id);
+                await this.recreateAsset(assetId);
+            });
+        });
     }
 
     searchAssets(query) {
@@ -365,6 +384,22 @@ class PrecisionToolkit {
                 </div>
             </div>
         `).join('');
+    }
+
+    async recreateAsset(assetId) {
+        const assets = JSON.parse(localStorage.getItem('taggedAssets') || '[]');
+        const asset = assets.find(a => a.id === assetId);
+
+        if (asset && asset.elementData) {
+            const result = await this.sandboxProxy.recreateAssetFromTemplate(asset.elementData);
+            if (result) {
+                console.log('Asset recreated successfully');
+            } else {
+                console.log('Failed to recreate asset');
+            }
+        } else {
+            console.log('No element data found for this asset');
+        }
     }
 
     // CSV Bulk Generator Methods

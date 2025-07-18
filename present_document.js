@@ -8,7 +8,7 @@ function start() {
         // Selection Management
         getSelectedElements: () => {
             const selection = Array.from(editor.context.selection);
-            console.log('Selection count:', selection.length);
+            // console.log('Selection count:', selection.length);
             // Return just the count and basic info, not the full objects
             return selection.map(el => ({
                 id: el.id,
@@ -59,10 +59,10 @@ function start() {
         // Alignment Functions
         alignElements: (direction, alignment) => {
             const selection = Array.from(editor.context.selection);
-            console.log('Aligning elements:', selection.length, 'direction:', direction, 'alignment:', alignment);
+            // console.log('Aligning elements:', selection.length, 'direction:', direction, 'alignment:', alignment);
 
             if (selection.length < 2) {
-                console.log('Not enough elements selected for alignment');
+                // console.log('Not enough elements selected for alignment');
                 return false;
             }
 
@@ -207,6 +207,107 @@ function start() {
 
             editor.context.insertionParent.children.append(textElement);
             return textElement.id;
+        },
+
+        captureSelectedAsset: () => {
+            const selection = Array.from(editor.context.selection);
+            if (selection.length === 1) {
+                const element = selection[0];
+
+                // Capture more detailed element data
+                const assetData = {
+                    id: element.id,
+                    type: element.constructor.name,
+                    properties: {
+                        x: element.translation.x,
+                        y: element.translation.y,
+                        width: element.width || 0,
+                        height: element.height || 0
+                    }
+                };
+
+                // Add type-specific properties
+                if (element.constructor.name === 'Text') {
+                    assetData.properties.text = element.text || '';
+                    assetData.properties.fontSize = element.fontSize || 16;
+                }
+
+                // Try to capture fill color
+                if (element.fill) {
+                    try {
+                        // This might not work for all fill types, but we'll try
+                        assetData.properties.fillColor = {
+                            red: element.fill.color?.red || 0,
+                            green: element.fill.color?.green || 0,
+                            blue: element.fill.color?.blue || 0,
+                            alpha: element.fill.color?.alpha || 1
+                        };
+                    } catch (e) {
+                        console.log('Could not capture fill color');
+                    }
+                }
+
+                return assetData;
+            }
+            return null;
+        },
+
+        recreateAssetFromTemplate: (assetData) => {
+            try {
+                let newElement;
+
+                switch (assetData.type) {
+                    case 'Text':
+                        newElement = editor.createText();
+                        if (assetData.properties.text) {
+                            newElement.text = assetData.properties.text;
+                        }
+                        if (assetData.properties.fontSize) {
+                            newElement.fontSize = assetData.properties.fontSize;
+                        }
+                        break;
+
+                    case 'Rectangle':
+                        newElement = editor.createRectangle();
+                        break;
+
+                    case 'Ellipse':
+                        newElement = editor.createEllipse();
+                        break;
+
+                    default:
+                        console.log('Unknown element type:', assetData.type);
+                        return null;
+                }
+
+                if (newElement) {
+                    // Set size
+                    if (assetData.properties.width) newElement.width = assetData.properties.width;
+                    if (assetData.properties.height) newElement.height = assetData.properties.height;
+
+                    // Set position (with slight offset so it doesn't overlap exactly)
+                    newElement.translation = {
+                        x: (assetData.properties.x || 0) + 20,
+                        y: (assetData.properties.y || 0) + 20
+                    };
+
+                    // Try to restore fill color
+                    if (assetData.properties.fillColor) {
+                        try {
+                            newElement.fill = editor.makeColorFill(assetData.properties.fillColor);
+                        } catch (e) {
+                            console.log('Could not restore fill color');
+                        }
+                    }
+
+                    editor.context.insertionParent.children.append(newElement);
+                    console.log('Recreated element:', assetData.type);
+                    return newElement.id;
+                }
+            } catch (error) {
+                console.error('Failed to recreate asset:', error);
+                return null;
+            }
         }
     };
 
