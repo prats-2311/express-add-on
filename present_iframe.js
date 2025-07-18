@@ -77,6 +77,19 @@ class PrecisionToolkit {
 
         // Granular controls
         this.setupGranularControls();
+
+        // Add these debug handlers
+        document.getElementById('debug-selection')?.addEventListener('click', async () => {
+            const selection = await this.sandboxProxy.getSelectedElements();
+            console.log('Manual selection check:', selection.length);
+            alert(`Selected elements: ${selection.length}`);
+        });
+
+        document.getElementById('force-align-left')?.addEventListener('click', async () => {
+            const result = await this.sandboxProxy.alignElements('horizontal', 'left');
+            console.log('Force align result:', result);
+            alert(`Alignment result: ${result}`);
+        });
     }
 
     setupGranularControls() {
@@ -85,22 +98,34 @@ class PrecisionToolkit {
         const sizeWidth = document.getElementById('size-width');
         const sizeHeight = document.getElementById('size-height');
 
-        // Position controls
-        posX?.addEventListener('change', async (e) => {
-            await this.sandboxProxy.updateElementPosition(parseInt(e.target.value), null);
+        // Position controls - use 'input' for real-time updates
+        posX?.addEventListener('input', async (e) => {
+            const value = parseInt(e.target.value);
+            if (!isNaN(value)) {
+                await this.sandboxProxy.updateElementPosition(value, null);
+            }
         });
 
-        posY?.addEventListener('change', async (e) => {
-            await this.sandboxProxy.updateElementPosition(null, parseInt(e.target.value));
+        posY?.addEventListener('input', async (e) => {
+            const value = parseInt(e.target.value);
+            if (!isNaN(value)) {
+                await this.sandboxProxy.updateElementPosition(null, value);
+            }
         });
 
-        // Size controls
-        sizeWidth?.addEventListener('change', async (e) => {
-            await this.sandboxProxy.updateElementSize(parseInt(e.target.value), null);
+        // Size controls - use 'input' for real-time updates
+        sizeWidth?.addEventListener('input', async (e) => {
+            const value = parseInt(e.target.value);
+            if (!isNaN(value) && value > 0) {
+                await this.sandboxProxy.updateElementSize(value, null);
+            }
         });
 
-        sizeHeight?.addEventListener('change', async (e) => {
-            await this.sandboxProxy.updateElementSize(null, parseInt(e.target.value));
+        sizeHeight?.addEventListener('input', async (e) => {
+            const value = parseInt(e.target.value);
+            if (!isNaN(value) && value > 0) {
+                await this.sandboxProxy.updateElementSize(null, value);
+            }
         });
     }
 
@@ -108,6 +133,7 @@ class PrecisionToolkit {
         this.selectionMonitor = setInterval(async () => {
             try {
                 const selection = await this.sandboxProxy.getSelectedElements();
+                console.log('UI: Selection detected:', selection.length);
                 this.updateSelectionUI(selection);
 
                 // Update granular controls for single selection
@@ -133,15 +159,26 @@ class PrecisionToolkit {
             statusEl.textContent = `${count} elements selected`;
         }
 
+        console.log('Updating UI for', count, 'selected elements');
+
         // Enable/disable alignment buttons
         const alignButtons = document.querySelectorAll('.align-btn');
         alignButtons.forEach(btn => {
             btn.disabled = count < 2;
+            console.log('Align button', btn.textContent, 'disabled:', btn.disabled);
         });
 
         // Enable/disable distribution buttons
-        document.getElementById('distribute-horizontal').disabled = count < 3;
-        document.getElementById('distribute-vertical').disabled = count < 3;
+        const distributeH = document.getElementById('distribute-horizontal');
+        const distributeV = document.getElementById('distribute-vertical');
+        if (distributeH) {
+            distributeH.disabled = count < 3;
+            console.log('Distribute H disabled:', distributeH.disabled);
+        }
+        if (distributeV) {
+            distributeV.disabled = count < 3;
+            console.log('Distribute V disabled:', distributeV.disabled);
+        }
 
         // Enable/disable granular controls
         const granularInputs = document.querySelectorAll('#granular-section input');

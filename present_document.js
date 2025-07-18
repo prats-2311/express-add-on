@@ -7,7 +7,17 @@ function start() {
     const sandboxApi = {
         // Selection Management
         getSelectedElements: () => {
-            return Array.from(editor.context.selection);
+            const selection = Array.from(editor.context.selection);
+            console.log('Selection count:', selection.length);
+            // Return just the count and basic info, not the full objects
+            return selection.map(el => ({
+                id: el.id,
+                type: el.constructor.name,
+                x: el.translation.x,
+                y: el.translation.y,
+                width: el.width || 0,
+                height: el.height || 0
+            }));
         },
 
         // Test Element Creation
@@ -49,32 +59,43 @@ function start() {
         // Alignment Functions
         alignElements: (direction, alignment) => {
             const selection = Array.from(editor.context.selection);
-            if (selection.length < 2) return false;
+            console.log('Aligning elements:', selection.length, 'direction:', direction, 'alignment:', alignment);
 
-            if (direction === 'horizontal') {
-                const referenceX = alignment === 'left' ? Math.min(...selection.map(el => el.translation.x)) :
-                    alignment === 'right' ? Math.max(...selection.map(el => el.translation.x + (el.width || 0))) :
-                        selection.reduce((sum, el) => sum + el.translation.x + (el.width || 0) / 2, 0) / selection.length;
-
-                selection.forEach(element => {
-                    const width = element.width || 0;
-                    const newX = alignment === 'right' ? referenceX - width :
-                        alignment === 'center' ? referenceX - width / 2 : referenceX;
-                    element.translation = { x: newX, y: element.translation.y };
-                });
-            } else {
-                const referenceY = alignment === 'top' ? Math.min(...selection.map(el => el.translation.y)) :
-                    alignment === 'bottom' ? Math.max(...selection.map(el => el.translation.y + (el.height || 0))) :
-                        selection.reduce((sum, el) => sum + el.translation.y + (el.height || 0) / 2, 0) / selection.length;
-
-                selection.forEach(element => {
-                    const height = element.height || 0;
-                    const newY = alignment === 'bottom' ? referenceY - height :
-                        alignment === 'middle' ? referenceY - height / 2 : referenceY;
-                    element.translation = { x: element.translation.x, y: newY };
-                });
+            if (selection.length < 2) {
+                console.log('Not enough elements selected for alignment');
+                return false;
             }
-            return true;
+
+            try {
+                if (direction === 'horizontal') {
+                    const referenceX = alignment === 'left' ? Math.min(...selection.map(el => el.translation.x)) :
+                        alignment === 'right' ? Math.max(...selection.map(el => el.translation.x + (el.width || 0))) :
+                            selection.reduce((sum, el) => sum + el.translation.x + (el.width || 0) / 2, 0) / selection.length;
+
+                    selection.forEach(element => {
+                        const width = element.width || 0;
+                        const newX = alignment === 'right' ? referenceX - width :
+                            alignment === 'center' ? referenceX - width / 2 : referenceX;
+                        element.translation = { x: newX, y: element.translation.y };
+                    });
+                } else {
+                    const referenceY = alignment === 'top' ? Math.min(...selection.map(el => el.translation.y)) :
+                        alignment === 'bottom' ? Math.max(...selection.map(el => el.translation.y + (el.height || 0))) :
+                            selection.reduce((sum, el) => sum + el.translation.y + (el.height || 0) / 2, 0) / selection.length;
+
+                    selection.forEach(element => {
+                        const height = element.height || 0;
+                        const newY = alignment === 'bottom' ? referenceY - height :
+                            alignment === 'middle' ? referenceY - height / 2 : referenceY;
+                        element.translation = { x: element.translation.x, y: newY };
+                    });
+                }
+                console.log('Alignment completed successfully');
+                return true;
+            } catch (error) {
+                console.error('Alignment error:', error);
+                return false;
+            }
         },
 
         // Distribution Functions
