@@ -538,10 +538,12 @@ class PrecisionToolkit {
     async applyPatternToSelected() {
         try {
             const patternData = this.getPatternData();
+            console.log('Applying pattern to selected elements:', patternData);
+
             const result = await this.sandboxProxy.applyPatternToElements(patternData);
 
             if (result) {
-                this.showStatusMessage('Pattern applied to selected elements!');
+                this.showStatusMessage(`${patternData.type} pattern applied to selected elements!`);
             } else {
                 this.showStatusMessage('No suitable elements selected for pattern application', 'error');
             }
@@ -554,10 +556,12 @@ class PrecisionToolkit {
     async createPatternElement() {
         try {
             const patternData = this.getPatternData();
+            console.log('Creating pattern element with data:', patternData);
+
             const result = await this.sandboxProxy.createPatternElement(patternData);
 
             if (result) {
-                this.showStatusMessage('Pattern element created successfully!');
+                this.showStatusMessage(`${patternData.type} pattern element created successfully!`);
             } else {
                 this.showStatusMessage('Failed to create pattern element', 'error');
             }
@@ -568,12 +572,23 @@ class PrecisionToolkit {
     }
 
     getPatternData() {
+        const size = parseInt(document.getElementById('pattern-size')?.value || 30);
+        const color1 = document.getElementById('pattern-color1')?.value || '#007acc';
+        const color2 = document.getElementById('pattern-color2')?.value || '#ffffff';
+
         return {
             type: this.selectedPattern,
-            size: parseInt(document.getElementById('pattern-size')?.value || 30),
-            color1: document.getElementById('pattern-color1')?.value || '#007acc',
-            color2: document.getElementById('pattern-color2')?.value || '#ffffff',
-            canvas: this.patternCanvas.toDataURL()
+            size: size,
+            color1: color1,
+            color2: color2,
+            canvas: this.patternCanvas ? this.patternCanvas.toDataURL() : null,
+            // Add pattern-specific properties
+            properties: {
+                primaryColor: color1,
+                secondaryColor: color2,
+                scale: size,
+                variant: this.selectedPattern
+            }
         };
     }
 
