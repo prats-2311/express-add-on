@@ -339,19 +339,242 @@ class PrecisionToolkit {
     }
 
     setupPatternGenerator() {
-        // Pattern generator functionality - placeholder for now
-        console.log('Pattern generator setup - feature coming soon');
+        this.selectedPattern = 'geometric';
+        this.patternCanvas = document.getElementById('pattern-canvas');
+        this.patternCtx = this.patternCanvas?.getContext('2d');
 
-        // Add basic setup if pattern generator elements exist
-        const patternButtons = document.querySelectorAll('.pattern-btn');
-        if (patternButtons.length > 0) {
-            patternButtons.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    console.log('Pattern selected:', e.target.dataset.pattern);
-                    this.showStatusMessage('Pattern generator feature coming soon!');
-                });
+        // Pattern type selection
+        document.querySelectorAll('.pattern-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.selectedPattern = e.target.dataset.pattern;
+                this.generatePatternPreview();
+            });
+        });
+
+        // Set default active pattern
+        document.querySelector('.pattern-btn[data-pattern="geometric"]')?.classList.add('active');
+
+        // Pattern size control
+        const sizeSlider = document.getElementById('pattern-size');
+        const sizeValue = document.getElementById('pattern-size-value');
+        if (sizeSlider && sizeValue) {
+            sizeSlider.addEventListener('input', (e) => {
+                sizeValue.textContent = e.target.value;
+                this.generatePatternPreview();
             });
         }
+
+        // Color controls
+        document.getElementById('pattern-color1')?.addEventListener('change', () => {
+            this.generatePatternPreview();
+        });
+        document.getElementById('pattern-color2')?.addEventListener('change', () => {
+            this.generatePatternPreview();
+        });
+
+        // Action buttons
+        document.getElementById('generate-pattern')?.addEventListener('click', () => {
+            this.generatePatternPreview();
+            this.showStatusMessage('Pattern regenerated!');
+        });
+
+        document.getElementById('apply-pattern')?.addEventListener('click', async () => {
+            await this.applyPatternToSelected();
+        });
+
+        document.getElementById('create-pattern-element')?.addEventListener('click', async () => {
+            await this.createPatternElement();
+        });
+
+        // Initial pattern generation
+        this.generatePatternPreview();
+    }
+
+    generatePatternPreview() {
+        if (!this.patternCtx) return;
+
+        const canvas = this.patternCanvas;
+        const ctx = this.patternCtx;
+        const size = parseInt(document.getElementById('pattern-size')?.value || 30);
+        const color1 = document.getElementById('pattern-color1')?.value || '#007acc';
+        const color2 = document.getElementById('pattern-color2')?.value || '#ffffff';
+
+        // Clear canvas
+        ctx.fillStyle = color2;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Generate pattern based on type
+        switch (this.selectedPattern) {
+            case 'geometric':
+                this.drawGeometricPattern(ctx, canvas.width, canvas.height, size, color1, color2);
+                break;
+            case 'dots':
+                this.drawDotsPattern(ctx, canvas.width, canvas.height, size, color1, color2);
+                break;
+            case 'stripes':
+                this.drawStripesPattern(ctx, canvas.width, canvas.height, size, color1, color2);
+                break;
+            case 'waves':
+                this.drawWavesPattern(ctx, canvas.width, canvas.height, size, color1, color2);
+                break;
+            case 'hexagon':
+                this.drawHexagonPattern(ctx, canvas.width, canvas.height, size, color1, color2);
+                break;
+            case 'noise':
+                this.drawNoisePattern(ctx, canvas.width, canvas.height, size, color1, color2);
+                break;
+        }
+    }
+
+    drawGeometricPattern(ctx, width, height, size, color1, color2) {
+        ctx.fillStyle = color1;
+        for (let x = 0; x < width; x += size) {
+            for (let y = 0; y < height; y += size) {
+                if ((x / size + y / size) % 2 === 0) {
+                    ctx.fillRect(x, y, size / 2, size / 2);
+                    ctx.fillRect(x + size / 2, y + size / 2, size / 2, size / 2);
+                }
+            }
+        }
+    }
+
+    drawDotsPattern(ctx, width, height, size, color1, color2) {
+        ctx.fillStyle = color1;
+        const radius = size / 6;
+        for (let x = size / 2; x < width; x += size) {
+            for (let y = size / 2; y < height; y += size) {
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    drawStripesPattern(ctx, width, height, size, color1, color2) {
+        ctx.fillStyle = color1;
+        for (let x = 0; x < width; x += size) {
+            if (Math.floor(x / size) % 2 === 0) {
+                ctx.fillRect(x, 0, size / 2, height);
+            }
+        }
+    }
+
+    drawWavesPattern(ctx, width, height, size, color1, color2) {
+        ctx.strokeStyle = color1;
+        ctx.lineWidth = 3;
+        const amplitude = size / 4;
+        const frequency = Math.PI * 2 / size;
+
+        for (let y = 0; y < height; y += size / 2) {
+            ctx.beginPath();
+            for (let x = 0; x < width; x++) {
+                const waveY = y + Math.sin(x * frequency) * amplitude;
+                if (x === 0) ctx.moveTo(x, waveY);
+                else ctx.lineTo(x, waveY);
+            }
+            ctx.stroke();
+        }
+    }
+
+    drawHexagonPattern(ctx, width, height, size, color1, color2) {
+        ctx.fillStyle = color1;
+        const hexSize = size / 3;
+        const hexHeight = hexSize * Math.sqrt(3);
+
+        for (let row = 0; row < height / hexHeight + 1; row++) {
+            for (let col = 0; col < width / (hexSize * 1.5) + 1; col++) {
+                const x = col * hexSize * 1.5;
+                const y = row * hexHeight + (col % 2) * hexHeight / 2;
+                this.drawHexagon(ctx, x, y, hexSize);
+            }
+        }
+    }
+
+    drawHexagon(ctx, x, y, size) {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i;
+            const hx = x + size * Math.cos(angle);
+            const hy = y + size * Math.sin(angle);
+            if (i === 0) ctx.moveTo(hx, hy);
+            else ctx.lineTo(hx, hy);
+        }
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    drawNoisePattern(ctx, width, height, size, color1, color2) {
+        const imageData = ctx.createImageData(width, height);
+        const data = imageData.data;
+
+        const color1RGB = this.hexToRgb(color1);
+        const color2RGB = this.hexToRgb(color2);
+
+        for (let i = 0; i < data.length; i += 4) {
+            const noise = Math.random();
+            const useColor1 = noise > 0.5;
+            const color = useColor1 ? color1RGB : color2RGB;
+
+            data[i] = color.r;     // Red
+            data[i + 1] = color.g; // Green
+            data[i + 2] = color.b; // Blue
+            data[i + 3] = 255;     // Alpha
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 0, b: 0 };
+    }
+
+    async applyPatternToSelected() {
+        try {
+            const patternData = this.getPatternData();
+            const result = await this.sandboxProxy.applyPatternToElements(patternData);
+
+            if (result) {
+                this.showStatusMessage('Pattern applied to selected elements!');
+            } else {
+                this.showStatusMessage('No suitable elements selected for pattern application', 'error');
+            }
+        } catch (error) {
+            console.error('Pattern application failed:', error);
+            this.showStatusMessage('Pattern application failed', 'error');
+        }
+    }
+
+    async createPatternElement() {
+        try {
+            const patternData = this.getPatternData();
+            const result = await this.sandboxProxy.createPatternElement(patternData);
+
+            if (result) {
+                this.showStatusMessage('Pattern element created successfully!');
+            } else {
+                this.showStatusMessage('Failed to create pattern element', 'error');
+            }
+        } catch (error) {
+            console.error('Pattern element creation failed:', error);
+            this.showStatusMessage('Pattern element creation failed', 'error');
+        }
+    }
+
+    getPatternData() {
+        return {
+            type: this.selectedPattern,
+            size: parseInt(document.getElementById('pattern-size')?.value || 30),
+            color1: document.getElementById('pattern-color1')?.value || '#007acc',
+            color2: document.getElementById('pattern-color2')?.value || '#ffffff',
+            canvas: this.patternCanvas.toDataURL()
+        };
     }
 
     setupQuickAccessToolbar() {

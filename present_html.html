@@ -298,6 +298,55 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Pattern & Texture Generator -->
+            <div class="section">
+                <h3>🌟 Pattern & Texture Generator</h3>
+                <div class="control-group">
+                    <label>Pattern Type:</label>
+                    <div class="button-group pattern-buttons">
+                        <button class="pattern-btn" data-pattern="geometric">🔷 Geometric</button>
+                        <button class="pattern-btn" data-pattern="dots">⚪ Dots</button>
+                        <button class="pattern-btn" data-pattern="stripes">📏 Stripes</button>
+                        <button class="pattern-btn" data-pattern="waves">🌊 Waves</button>
+                        <button class="pattern-btn" data-pattern="hexagon">⬡ Hexagon</button>
+                        <button class="pattern-btn" data-pattern="noise">📺 Noise</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Pattern Size:</label>
+                    <div class="size-control">
+                        <input type="range" id="pattern-size" min="10" max="100" value="30">
+                        <span id="pattern-size-value">30</span>px
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Colors:</label>
+                    <div class="color-controls">
+                        <div class="color-input">
+                            <label>Primary:</label>
+                            <input type="color" id="pattern-color1" value="#007acc">
+                        </div>
+                        <div class="color-input">
+                            <label>Secondary:</label>
+                            <input type="color" id="pattern-color2" value="#ffffff">
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Live Preview:</label>
+                    <div id="pattern-preview" class="pattern-preview">
+                        <canvas id="pattern-canvas" width="200" height="150"></canvas>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="button-group">
+                        <button id="generate-pattern">Generate New</button>
+                        <button id="apply-pattern">Apply to Selected</button>
+                        <button id="create-pattern-element">Create New Element</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <script type="module" src="present_iframe.js"></script>

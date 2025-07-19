@@ -670,3 +670,103 @@ input[type="text"] {
 .filter-item:hover .delete-filter {
     display: block;
 }
+
+/* Pattern Generator Styles */
+.pattern-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.pattern-btn {
+    font-size: 11px;
+    padding: 8px 6px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.pattern-btn.active {
+    background: #007acc;
+    color: white;
+}
+
+.size-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.size-control input[type="range"] {
+    flex: 1;
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.size-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #007acc;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.size-control span {
+    min-width: 25px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.color-controls {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.color-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-input label {
+    font-size: 12px;
+    min-width: 60px;
+    margin: 0;
+}
+
+.color-input input[type="color"] {
+    width: 40px;
+    height: 30px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.pattern-preview {
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+#pattern-canvas {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    max-width: 100%;
+    height: auto;
+}
+
+.pattern-preview canvas {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}

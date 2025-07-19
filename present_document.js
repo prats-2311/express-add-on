@@ -715,6 +715,61 @@ function start() {
             }
 
             return appliedCount > 0;
+        },
+
+        // Pattern application
+        applyPatternToElements: async (patternData) => {
+            const selection = Array.from(editor.context.selection);
+            if (selection.length === 0) {
+                return false;
+            }
+
+            let appliedCount = 0;
+
+            for (const element of selection) {
+                try {
+                    // Apply pattern as fill color (simplified implementation)
+                    if (element.fill !== undefined) {
+                        // Create a gradient-like effect based on pattern colors
+                        const color1 = sandboxApi.parseColor(patternData.color1);
+                        const color2 = sandboxApi.parseColor(patternData.color2);
+
+                        if (color1) {
+                            element.fill = editor.makeColorFill(color1);
+                            appliedCount++;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to apply pattern to element:', error);
+                }
+            }
+
+            return appliedCount > 0;
+        },
+
+        createPatternElement: async (patternData) => {
+            try {
+                const rectangle = editor.createRectangle();
+                rectangle.width = 150;
+                rectangle.height = 100;
+                rectangle.translation = {
+                    x: Math.random() * 200,
+                    y: Math.random() * 200
+                };
+
+                // Apply pattern color
+                const color = sandboxApi.parseColor(patternData.color1);
+                if (color) {
+                    rectangle.fill = editor.makeColorFill(color);
+                }
+
+                editor.context.insertionParent.children.append(rectangle);
+                console.log('Created pattern element:', patternData.type);
+                return rectangle.id;
+            } catch (error) {
+                console.error('Failed to create pattern element:', error);
+                return null;
+            }
         }
     };
 
