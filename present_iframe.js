@@ -797,7 +797,8 @@ class PrecisionToolkit {
         const container = document.getElementById('asset-library');
 
         container.innerHTML = assets.map(asset => `
-            <div class="asset-item" data-id="${asset.id}" style="cursor: pointer;">
+            <div class="asset-item" data-id="${asset.id}" style="cursor: pointer; position: relative;">
+                <button class="delete-asset-btn" onclick="window.toolkit.deleteAsset(${asset.id})" style="position: absolute; top: 4px; right: 4px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
                 <div>${asset.name}</div>
                 <div class="asset-tags">
                     ${asset.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
@@ -808,7 +809,10 @@ class PrecisionToolkit {
 
         // Add click handlers to recreate assets
         container.querySelectorAll('.asset-item').forEach(item => {
-            item.addEventListener('click', async () => {
+            item.addEventListener('click', async (e) => {
+                // Don't recreate if delete button was clicked
+                if (e.target.classList.contains('delete-asset-btn')) return;
+                
                 const assetId = parseInt(item.dataset.id);
                 await this.recreateAsset(assetId);
             });
@@ -846,6 +850,20 @@ class PrecisionToolkit {
             }
         } else {
             console.log('No element data found for this asset');
+        }
+    }
+
+    deleteAsset(assetId) {
+        try {
+            const assets = JSON.parse(localStorage.getItem('taggedAssets') || '[]');
+            const filteredAssets = assets.filter(asset => asset.id !== assetId);
+            localStorage.setItem('taggedAssets', JSON.stringify(filteredAssets));
+            
+            this.loadAssetLibrary();
+            this.showStatusMessage('Asset deleted successfully');
+        } catch (error) {
+            console.error('Failed to delete asset:', error);
+            this.showStatusMessage('Failed to delete asset', 'error');
         }
     }
 
@@ -1543,12 +1561,8 @@ class PrecisionToolkit {
     }
 
     async deletePalette(paletteId) {
-        if (!confirm('Are you sure you want to delete this palette?')) {
-            return;
-        }
-
         try {
-            // Handle palette deletion directly in iframe
+            // Handle palette deletion directly in iframe without confirm dialog
             const palettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
             const filteredPalettes = palettes.filter(p => p.id !== paletteId);
             localStorage.setItem('brandPalettes', JSON.stringify(filteredPalettes));
@@ -1616,3 +1630,6 @@ class PrecisionToolkit {
 
 const toolkit = new PrecisionToolkit();
 toolkit.init();
+
+// Make toolkit available globally for onclick handlers
+window.toolkit = toolkit;
