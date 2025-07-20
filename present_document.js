@@ -728,14 +728,11 @@ function start() {
 
             for (const element of selection) {
                 try {
-                    // Apply pattern as fill color (simplified implementation)
+                    // Apply pattern based on type
                     if (element.fill !== undefined) {
-                        // Create a gradient-like effect based on pattern colors
-                        const color1 = sandboxApi.parseColor(patternData.color1);
-                        const color2 = sandboxApi.parseColor(patternData.color2);
-
-                        if (color1) {
-                            element.fill = editor.makeColorFill(color1);
+                        const patternColor = sandboxApi.createPatternFill(patternData);
+                        if (patternColor) {
+                            element.fill = patternColor;
                             appliedCount++;
                         }
                     }
@@ -749,6 +746,8 @@ function start() {
 
         createPatternElement: async (patternData) => {
             try {
+                console.log('Creating pattern element with data:', patternData);
+
                 const rectangle = editor.createRectangle();
                 rectangle.width = 150;
                 rectangle.height = 100;
@@ -757,18 +756,150 @@ function start() {
                     y: Math.random() * 200
                 };
 
-                // Apply pattern color
-                const color = sandboxApi.parseColor(patternData.color1);
-                if (color) {
-                    rectangle.fill = editor.makeColorFill(color);
+                console.log('Rectangle created, applying pattern fill...');
+
+                // Apply pattern fill
+                const patternFill = sandboxApi.createPatternFill(patternData);
+                if (patternFill) {
+                    console.log('Pattern fill created successfully, applying to rectangle...');
+                    rectangle.fill = patternFill;
+                    console.log('Pattern fill applied to rectangle');
+                } else {
+                    console.log('Pattern fill creation failed, using fallback color');
+                    // Fallback to solid color
+                    const color = sandboxApi.parseColor(patternData.color1);
+                    if (color) {
+                        rectangle.fill = editor.makeColorFill(color);
+                        console.log('Fallback color applied');
+                    }
                 }
 
                 editor.context.insertionParent.children.append(rectangle);
-                console.log('Created pattern element:', patternData.type);
+                console.log('Pattern element added to document');
                 return rectangle.id;
             } catch (error) {
                 console.error('Failed to create pattern element:', error);
+                console.error('Error details:', error.message, error.stack);
                 return null;
+            }
+        },
+
+        // Enhanced pattern fill creation
+        createPatternFill: (patternData) => {
+            try {
+                const color1 = sandboxApi.parseColor(patternData.color1);
+                const color2 = sandboxApi.parseColor(patternData.color2);
+
+                if (!color1 || !color2) {
+                    return null;
+                }
+
+                console.log('Creating pattern fill for:', patternData.type, 'with colors:', color1, color2);
+
+                // Create more sophisticated patterns using available SDK features
+                switch (patternData.type) {
+                    case 'geometric':
+                        // Create a multi-stop gradient for geometric effect
+                        try {
+                            return editor.makeLinearGradientFill([
+                                { color: color1, position: 0 },
+                                { color: color2, position: 0.25 },
+                                { color: color1, position: 0.5 },
+                                { color: color2, position: 0.75 },
+                                { color: color1, position: 1 }
+                            ], { x: 0, y: 0 }, { x: 1, y: 1 });
+                        } catch (e) {
+                            console.log('Gradient failed, using solid color');
+                            return editor.makeColorFill(color1);
+                        }
+
+                    case 'stripes':
+                        // Vertical stripes using gradient
+                        try {
+                            return editor.makeLinearGradientFill([
+                                { color: color1, position: 0 },
+                                { color: color1, position: 0.2 },
+                                { color: color2, position: 0.2 },
+                                { color: color2, position: 0.4 },
+                                { color: color1, position: 0.4 },
+                                { color: color1, position: 0.6 },
+                                { color: color2, position: 0.6 },
+                                { color: color2, position: 0.8 },
+                                { color: color1, position: 0.8 },
+                                { color: color1, position: 1 }
+                            ], { x: 0, y: 0 }, { x: 1, y: 0 });
+                        } catch (e) {
+                            return editor.makeColorFill(color1);
+                        }
+
+                    case 'dots':
+                        // Radial gradient for dot-like effect
+                        try {
+                            return editor.makeRadialGradientFill([
+                                { color: color1, position: 0 },
+                                { color: color2, position: 0.3 },
+                                { color: color1, position: 0.6 },
+                                { color: color2, position: 1 }
+                            ], { x: 0.5, y: 0.5 }, { x: 0.5, y: 0.5 }, 0.8);
+                        } catch (e) {
+                            return editor.makeColorFill(color1);
+                        }
+
+                    case 'waves':
+                        // Diagonal wave-like gradient
+                        try {
+                            return editor.makeLinearGradientFill([
+                                { color: color1, position: 0 },
+                                { color: color2, position: 0.15 },
+                                { color: color1, position: 0.3 },
+                                { color: color2, position: 0.45 },
+                                { color: color1, position: 0.6 },
+                                { color: color2, position: 0.75 },
+                                { color: color1, position: 1 }
+                            ], { x: 0, y: 0 }, { x: 1, y: 0.3 });
+                        } catch (e) {
+                            return editor.makeColorFill(color1);
+                        }
+
+                    case 'hexagon':
+                        // Hexagonal radial gradient
+                        try {
+                            return editor.makeRadialGradientFill([
+                                { color: color2, position: 0 },
+                                { color: color1, position: 0.4 },
+                                { color: color2, position: 0.7 },
+                                { color: color1, position: 1 }
+                            ], { x: 0.5, y: 0.5 }, { x: 0.5, y: 0.5 }, 0.6);
+                        } catch (e) {
+                            return editor.makeColorFill(color1);
+                        }
+
+                    case 'noise':
+                        // Random gradient for noise effect
+                        const positions = [0, 0.2, 0.4, 0.6, 0.8, 1];
+                        const gradientStops = positions.map(pos => ({
+                            color: Math.random() > 0.5 ? color1 : color2,
+                            position: pos
+                        }));
+
+                        try {
+                            return editor.makeLinearGradientFill(
+                                gradientStops,
+                                { x: Math.random(), y: Math.random() },
+                                { x: Math.random(), y: Math.random() }
+                            );
+                        } catch (e) {
+                            return editor.makeColorFill(Math.random() > 0.5 ? color1 : color2);
+                        }
+
+                    default:
+                        return editor.makeColorFill(color1);
+                }
+            } catch (error) {
+                console.error('Failed to create pattern fill:', error);
+                // Fallback to solid color
+                const color1 = sandboxApi.parseColor(patternData.color1);
+                return color1 ? editor.makeColorFill(color1) : null;
             }
         }
     };
