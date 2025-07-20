@@ -16,8 +16,8 @@ class PrecisionToolkit {
         this.setupPrecisionToolkit();
         this.setupContentOrchestrator();
         this.setupCreativeEnhancer();
-        this.setupColorPaletteManager(); // Make sure this is called
         this.refreshProjectInfo();
+        this.startSelectionMonitoring();
     }
 
     setupNavigation() {
@@ -75,6 +75,7 @@ class PrecisionToolkit {
         this.setupTextEffects();
         this.setupGranularControls();
         this.setupColorPaletteManager();
+        this.startSelectionMonitoring();
     }
 
     setupAlignment() {
@@ -1438,15 +1439,23 @@ class PrecisionToolkit {
         }
 
         try {
-            const result = await this.sandboxProxy.saveBrandPalette(paletteName, this.currentExtractedColors);
+            // Handle palette saving directly in iframe
+            const existingPalettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
             
-            if (result.success) {
-                this.showStatusMessage(`Palette "${paletteName}" saved successfully!`);
-                document.getElementById('palette-name').value = '';
-                this.loadBrandPalettes();
-            } else {
-                this.showStatusMessage(result.message, 'error');
-            }
+            const newPalette = {
+                id: Date.now(),
+                name: paletteName,
+                colors: this.currentExtractedColors,
+                createdAt: new Date().toISOString(),
+                elementCount: this.currentExtractedColors.length
+            };
+
+            existingPalettes.push(newPalette);
+            localStorage.setItem('brandPalettes', JSON.stringify(existingPalettes));
+
+            this.showStatusMessage(`Palette "${paletteName}" saved successfully!`);
+            document.getElementById('palette-name').value = '';
+            this.loadBrandPalettes();
         } catch (error) {
             console.error('Failed to save palette:', error);
             this.showStatusMessage('Failed to save palette', 'error');
@@ -1455,11 +1464,9 @@ class PrecisionToolkit {
 
     async loadBrandPalettes() {
         try {
-            const result = await this.sandboxProxy.getBrandPalettes();
-            
-            if (result.success) {
-                this.displayBrandPalettes(result.palettes);
-            }
+            // Handle palette loading directly in iframe
+            const palettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
+            this.displayBrandPalettes(palettes);
         } catch (error) {
             console.error('Failed to load palettes:', error);
         }
@@ -1513,8 +1520,9 @@ class PrecisionToolkit {
 
     async applyPalette(paletteId) {
         try {
-            const result = await this.sandboxProxy.getBrandPalettes();
-            const palette = result.palettes.find(p => p.id === paletteId);
+            // Get palette from local storage
+            const palettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
+            const palette = palettes.find(p => p.id === paletteId);
             
             if (!palette) {
                 this.showStatusMessage('Palette not found', 'error');
@@ -1540,14 +1548,13 @@ class PrecisionToolkit {
         }
 
         try {
-            const result = await this.sandboxProxy.deleteBrandPalette(paletteId);
+            // Handle palette deletion directly in iframe
+            const palettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
+            const filteredPalettes = palettes.filter(p => p.id !== paletteId);
+            localStorage.setItem('brandPalettes', JSON.stringify(filteredPalettes));
             
-            if (result.success) {
-                this.showStatusMessage('Palette deleted successfully');
-                this.loadBrandPalettes();
-            } else {
-                this.showStatusMessage('Failed to delete palette', 'error');
-            }
+            this.showStatusMessage('Palette deleted successfully');
+            this.loadBrandPalettes();
         } catch (error) {
             console.error('Failed to delete palette:', error);
             this.showStatusMessage('Failed to delete palette', 'error');

@@ -1,115 +1,65 @@
-Based on the HTML file and the code structure, here's the comprehensive list of features we are implementing across the three toolkits:
+## How to Use in Adobe Express Code Playground
 
-## 🎯 **Precision & Consistency Toolkit**
+### **Quick Start Guide**
 
-### 📐 Precision Alignment & Distribution
-- **Horizontal Alignment**: Left, Center, Right alignment for multiple selected elements
-- **Vertical Alignment**: Top, Middle, Bottom alignment for multiple selected elements
-- **Distribution**: Horizontal and Vertical distribution for 3+ elements with equal spacing
+1. **Open Adobe Express** → Navigate to **Code Playground**
+2. **Copy-paste the toolkit files** directly into the playground:
+   - Copy `present_html.html` content into the HTML panel
+   - Copy `present_css.css` content into the CSS panel
+   - Copy `present_iframe.js` content into the JavaScript panel
+   - Copy `present_document.js` content into the Document Sandbox panel
 
-### ✨ Advanced Text Effects Generator
-- **Text Input**: Custom text input with live preview
-- **Effect Styles**: 6 different text effects:
-    - 🌟 Neon Glow
-    - 📦 3D Shadow
-    - 🎞️ Vintage
-    - 🌈 Gradient
-    - ⭕ Outline
-    - ✨ Metallic
-- **Live Preview**: Real-time effect preview before applying
+### **Step-by-Step Usage**
 
-### 🎨 Style Library & Consistency
-- **Save Styles**: Capture and save styling from selected elements
-- **Apply Styles**: Apply saved styles to new elements
-- **Style Management**: Named style library with persistent storage
+#### **1. Initialize the Toolkit**
+- The main dashboard shows **3 toolkit options**
+- Click any toolkit to access its features
 
-### ⚙️ Granular Element Control
-- **Position Control**: Precise X, Y coordinate adjustment
-- **Size Control**: Exact width and height modification
-- **Typography Control**: Letter spacing and line height for text elements
-- **Live Updates**: Real-time property updates while editing
+#### **2. Precision & Consistency Toolkit** 🎯
 
-### 🧪 Test Elements
-- **Element Creation**: Quick creation of rectangles, text, and circles for testing
+**Usage Flow:**
+1. **Select elements** → Status shows "X elements selected"
+2. **Choose alignment** → Click "Align Left/Center/Right"
+3. **Apply text effects** → Select text → Choose effect → Preview → Apply
+4. **Granular control** → Adjust X/Y position, width/height precisely
 
----
+#### **3. Content & Project Orchestrator** 📋
 
-## 📋 **Content & Project Orchestrator**
+**Usage Flow:**
+1. **Upload CSV** → Click "Choose File" → Select your data file
+2. **Preview data** → Review headers and content
+3. **Generate bulk** → Click "Generate Bulk Content"
+4. **Organize assets** → Tag elements → Search by tags
 
-### 🏷️ Advanced Asset Organizer
-- **Asset Tagging**: Add custom tags to selected assets
-- **Tag-based Search**: Search and filter assets by tags or names
-- **Asset Library**: Organized view of all tagged assets
+#### **4. UI Customizer & Creative Enhancer** 🎨
 
-### 📊 Bulk Content Generator
-- **CSV Upload**: Import data from CSV files
-- **Data Preview**: Preview CSV headers and data before processing
-- **Element Mapping**: Map CSV columns to design elements
-- **Bulk Generation**: Create multiple design variations from CSV data
+**Usage Flow:**
+1. **Choose pattern** → Click pattern type button
+2. **Customize** → Adjust size, colors
+3. **Preview** → See live canvas preview
+4. **Apply** → "Apply to Selected" or "Create New Element"
 
-### 📁 Project Navigator & Dashboard
-- **Project Listing**: View and navigate between projects
-- **Page Management**: List and navigate pages within current project
-- **Project Refresh**: Update project listings
+### **Common Use Cases**
 
----
+#### **Social Media Campaign**
+1. Create base design in Express
+2. Upload CSV with campaign data (names, dates, colors)
+3. Use Bulk Generator → Generate 50+ variations
+4. Apply consistent brand colors with Palette Manager
+5. Organize with Asset Organizer tags
 
-## 🎨 **UI Customizer & Creative Enhancer**
+#### **Brand Consistency Project**
+1. Extract colors from brand logo
+2. Save as brand palette
+3. Create pattern library with brand colors
+4. Apply consistent alignment across all elements
+5. Save custom filters for brand aesthetic
 
-### ⚡ Customizable Quick Access Toolbar
-- **Action Selection**: Choose from 7 quick actions:
-    - Duplicate Element
-    - Remove Background
-    - Add Text
-    - Add Shape
-    - Crop Image
-    - Flip Horizontal
-    - Flip Vertical
-- **Custom Toolbar**: Build personalized quick access toolbar
+#### **Rapid Prototyping**
+1. Use Test Elements to create layout structure
+2. Apply precision alignment for pixel-perfect positioning
+3. Generate patterns for backgrounds/textures
+4. Create text effects for headlines
+5. Export organized asset library
 
-### 🌟 Pattern & Texture Generator
-- **Pattern Types**: 6 different pattern generators:
-    - 🔷 Geometric
-    - ⚪ Dots
-    - 📏 Stripes
-    - 🌊 Waves
-    - ⬡ Hexagon
-    - 📺 Noise
-- **Pattern Customization**: Size adjustment and dual-color selection
-- **Live Preview**: Canvas-based pattern preview
-- **Pattern Application**: Apply generated patterns to selected elements
-
-### 🎭 Custom Filter Pack Creator
-- **Image Adjustments**: 4 adjustment controls:
-    - Brightness (-100 to +100)
-    - Contrast (-100 to +100)
-    - Saturation (-100 to +100)
-    - Blur (0 to 20)
-- **Live Adjustments**: Real-time filter preview
-- **Filter Saving**: Save custom filter combinations with names
-- **Filter Library**: Manage and apply saved filters
-- **Reset Function**: Quick reset to default values
-
----
-
-## 🔧 **Core Infrastructure Features**
-
-### Navigation & UI
-- **Toolkit Selection**: Main dashboard for choosing between toolkits
-- **Back Navigation**: Easy return to toolkit selection
-- **Status Indicators**: Real-time feedback on selection and operations
-- **Responsive Design**: Adaptive layout for different screen sizes
-
-### Integration Features
-- **Adobe Express SDK**: Full integration with Adobe Express document API
-- **Real-time Selection**: Live monitoring of selected elements
-- **Error Handling**: Comprehensive error handling and user notifications
-- **Persistent Storage**: Save user preferences and custom content locally
-
-### Smart Features
-- **Context-Aware Controls**: UI adapts based on selected element types
-- **Batch Operations**: Perform actions on multiple elements simultaneously
-- **Undo/Redo Support**: Integration with Adobe Express undo system
-- **Performance Optimization**: Efficient handling of large documents and bulk operations
-
-This comprehensive toolkit provides professional-grade design tools that enhance the Adobe Express workflow with precision controls, automation features, and creative enhancement capabilities.
+**Ready to transform your Adobe Express workflow with professional-grade tools!** 🚀

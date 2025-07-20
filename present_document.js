@@ -957,21 +957,21 @@ function start() {
 
         saveBrandPalette: async (paletteName, colors) => {
             try {
-                // Get existing palettes from localStorage
-                const existingPalettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
-                
-                const newPalette = {
-                    id: Date.now(),
-                    name: paletteName,
-                    colors: colors,
-                    createdAt: new Date().toISOString(),
-                    elementCount: colors.length
+                // Send palette data to iframe for storage
+                runtime.apiProxy("documentSandbox").then(proxy => {
+                    proxy.sendPaletteToIframe(paletteName, colors);
+                });
+
+                return { 
+                    success: true, 
+                    palette: {
+                        id: Date.now(),
+                        name: paletteName,
+                        colors: colors,
+                        createdAt: new Date().toISOString(),
+                        elementCount: colors.length
+                    }
                 };
-
-                existingPalettes.push(newPalette);
-                localStorage.setItem('brandPalettes', JSON.stringify(existingPalettes));
-
-                return { success: true, palette: newPalette };
             } catch (error) {
                 console.error('Failed to save brand palette:', error);
                 return { success: false, message: 'Failed to save palette' };
@@ -979,25 +979,13 @@ function start() {
         },
 
         getBrandPalettes: async () => {
-            try {
-                const palettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
-                return { success: true, palettes: palettes };
-            } catch (error) {
-                console.error('Failed to get brand palettes:', error);
-                return { success: false, palettes: [] };
-            }
+            // This will be handled by the iframe
+            return { success: true, palettes: [] };
         },
 
         deleteBrandPalette: async (paletteId) => {
-            try {
-                const palettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
-                const filteredPalettes = palettes.filter(p => p.id !== paletteId);
-                localStorage.setItem('brandPalettes', JSON.stringify(filteredPalettes));
-                return { success: true };
-            } catch (error) {
-                console.error('Failed to delete brand palette:', error);
-                return { success: false };
-            }
+            // This will be handled by the iframe
+            return { success: true };
         },
 
         applyBrandPaletteToSelected: async (palette) => {
