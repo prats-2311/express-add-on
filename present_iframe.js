@@ -14,7 +14,10 @@ class PrecisionToolkit {
 
         this.setupNavigation();
         this.setupPrecisionToolkit();
-        this.startSelectionMonitoring();
+        this.setupContentOrchestrator();
+        this.setupCreativeEnhancer();
+        this.setupColorPaletteManager(); // Make sure this is called
+        this.refreshProjectInfo();
     }
 
     setupNavigation() {
@@ -68,6 +71,13 @@ class PrecisionToolkit {
     }
 
     setupPrecisionToolkit() {
+        this.setupAlignment();
+        this.setupTextEffects();
+        this.setupGranularControls();
+        this.setupColorPaletteManager();
+    }
+
+    setupAlignment() {
         // Test element creation
         document.getElementById('create-test-rect')?.addEventListener('click', async () => {
             await this.sandboxProxy.createTestRectangle();
@@ -98,25 +108,6 @@ class PrecisionToolkit {
         document.getElementById('distribute-vertical')?.addEventListener('click', async () => {
             await this.sandboxProxy.distributeElements('vertical');
         });
-
-        // Granular controls
-        this.setupGranularControls();
-
-        // Add these debug handlers
-        document.getElementById('debug-selection')?.addEventListener('click', async () => {
-            const selection = await this.sandboxProxy.getSelectedElements();
-            console.log('Manual selection check:', selection.length);
-            this.showStatusMessage(`Selected elements: ${selection.length}`);
-        });
-
-        document.getElementById('force-align-left')?.addEventListener('click', async () => {
-            const result = await this.sandboxProxy.alignElements('horizontal', 'left');
-            console.log('Force align result:', result);
-            this.showStatusMessage(`Alignment result: ${result}`);
-        });
-
-        // Text Effects Generator
-        this.setupTextEffects();
     }
 
     setupGranularControls() {
@@ -1356,6 +1347,263 @@ class PrecisionToolkit {
         localStorage.setItem('customFilters', JSON.stringify(savedFilters));
         this.loadFilterLibrary();
         this.showStatusMessage('Filter deleted');
+    }
+
+    setupColorPaletteManager() {
+        // Extract colors from selected elements
+        document.getElementById('extract-colors')?.addEventListener('click', async () => {
+            await this.extractColorsFromSelected();
+        });
+
+        // Save current palette
+        document.getElementById('save-palette')?.addEventListener('click', async () => {
+            await this.saveBrandPalette();
+        });
+
+        // Generate color variations
+        document.getElementById('generate-variations')?.addEventListener('click', async () => {
+            await this.generateColorVariations();
+        });
+
+        // Apply palette to selected elements - this was missing
+        document.getElementById('apply-palette')?.addEventListener('click', async () => {
+            this.showStatusMessage('Please use the Apply button on individual palettes below', 'error');
+        });
+
+        // Load existing palettes
+        this.loadBrandPalettes();
+    }
+
+    async extractColorsFromSelected() {
+        try {
+            const result = await this.sandboxProxy.extractColorsFromSelected();
+            
+            if (result.success) {
+                this.currentExtractedColors = result.colors;
+                this.displayExtractedColors(result.colors);
+                this.showStatusMessage(result.message);
+            } else {
+                this.showStatusMessage(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Color extraction failed:', error);
+            this.showStatusMessage('Color extraction failed', 'error');
+        }
+    }
+
+    displayExtractedColors(colors) {
+        const container = document.getElementById('extracted-colors');
+        if (!container) return;
+
+        container.innerHTML = '';
+        
+        if (colors.length === 0) {
+            container.innerHTML = '<p class="no-colors">No colors found in selected elements</p>';
+            return;
+        }
+
+        colors.forEach((color, index) => {
+            const colorItem = document.createElement('div');
+            colorItem.className = 'color-item';
+            colorItem.innerHTML = `
+                <div class="color-swatch" style="background-color: ${color.hex}"></div>
+                <div class="color-info">
+                    <div class="color-hex">${color.hex}</div>
+                    <div class="color-source">${color.source}</div>
+                </div>
+                <button class="color-action" data-color="${color.hex}">Copy</button>
+            `;
+            
+            // Add event listener for copy button
+            const copyBtn = colorItem.querySelector('.color-action');
+            copyBtn.addEventListener('click', () => {
+                this.copyColorToClipboard(color.hex);
+            });
+            
+            container.appendChild(colorItem);
+        });
+    }
+
+    async saveBrandPalette() {
+        const paletteName = document.getElementById('palette-name')?.value.trim();
+        
+        if (!paletteName) {
+            this.showStatusMessage('Please enter a palette name', 'error');
+            return;
+        }
+
+        if (!this.currentExtractedColors || this.currentExtractedColors.length === 0) {
+            this.showStatusMessage('No colors to save. Extract colors first.', 'error');
+            return;
+        }
+
+        try {
+            const result = await this.sandboxProxy.saveBrandPalette(paletteName, this.currentExtractedColors);
+            
+            if (result.success) {
+                this.showStatusMessage(`Palette "${paletteName}" saved successfully!`);
+                document.getElementById('palette-name').value = '';
+                this.loadBrandPalettes();
+            } else {
+                this.showStatusMessage(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Failed to save palette:', error);
+            this.showStatusMessage('Failed to save palette', 'error');
+        }
+    }
+
+    async loadBrandPalettes() {
+        try {
+            const result = await this.sandboxProxy.getBrandPalettes();
+            
+            if (result.success) {
+                this.displayBrandPalettes(result.palettes);
+            }
+        } catch (error) {
+            console.error('Failed to load palettes:', error);
+        }
+    }
+
+    displayBrandPalettes(palettes) {
+        const container = document.getElementById('saved-palettes');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (palettes.length === 0) {
+            container.innerHTML = '<p class="no-palettes">No saved palettes</p>';
+            return;
+        }
+
+        palettes.forEach(palette => {
+            const paletteItem = document.createElement('div');
+            paletteItem.className = 'palette-item';
+            paletteItem.innerHTML = `
+                <div class="palette-header">
+                    <h4>${palette.name}</h4>
+                    <span class="palette-count">${palette.colors.length} colors</span>
+                </div>
+                <div class="palette-colors">
+                    ${palette.colors.map(color => 
+                        `<div class="mini-swatch" style="background-color: ${color.hex}" title="${color.hex}"></div>`
+                    ).join('')}
+                </div>
+                <div class="palette-actions">
+                    <button class="apply-palette-btn" data-palette-id="${palette.id}">Apply</button>
+                    <button class="delete-palette-btn delete-btn" data-palette-id="${palette.id}">Delete</button>
+                </div>
+            `;
+            
+            // Add event listeners for palette actions
+            const applyBtn = paletteItem.querySelector('.apply-palette-btn');
+            const deleteBtn = paletteItem.querySelector('.delete-palette-btn');
+            
+            applyBtn.addEventListener('click', () => {
+                this.applyPalette(palette.id);
+            });
+            
+            deleteBtn.addEventListener('click', () => {
+                this.deletePalette(palette.id);
+            });
+            
+            container.appendChild(paletteItem);
+        });
+    }
+
+    async applyPalette(paletteId) {
+        try {
+            const result = await this.sandboxProxy.getBrandPalettes();
+            const palette = result.palettes.find(p => p.id === paletteId);
+            
+            if (!palette) {
+                this.showStatusMessage('Palette not found', 'error');
+                return;
+            }
+
+            const applyResult = await this.sandboxProxy.applyBrandPaletteToSelected(palette);
+            
+            if (applyResult.success) {
+                this.showStatusMessage(applyResult.message);
+            } else {
+                this.showStatusMessage(applyResult.message, 'error');
+            }
+        } catch (error) {
+            console.error('Failed to apply palette:', error);
+            this.showStatusMessage('Failed to apply palette', 'error');
+        }
+    }
+
+    async deletePalette(paletteId) {
+        if (!confirm('Are you sure you want to delete this palette?')) {
+            return;
+        }
+
+        try {
+            const result = await this.sandboxProxy.deleteBrandPalette(paletteId);
+            
+            if (result.success) {
+                this.showStatusMessage('Palette deleted successfully');
+                this.loadBrandPalettes();
+            } else {
+                this.showStatusMessage('Failed to delete palette', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to delete palette:', error);
+            this.showStatusMessage('Failed to delete palette', 'error');
+        }
+    }
+
+    async generateColorVariations() {
+        if (!this.currentExtractedColors || this.currentExtractedColors.length === 0) {
+            this.showStatusMessage('Extract colors first to generate variations', 'error');
+            return;
+        }
+
+        const baseColor = this.currentExtractedColors[0]; // Use first extracted color
+        const variationType = document.getElementById('variation-type')?.value || 'tints';
+
+        try {
+            const result = await this.sandboxProxy.generateColorVariations(baseColor.rgba, variationType);
+            
+            if (result.success) {
+                this.displayColorVariations(result.variations);
+                this.showStatusMessage(`Generated ${result.variations.length} color variations`);
+            } else {
+                this.showStatusMessage(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Failed to generate variations:', error);
+            this.showStatusMessage('Failed to generate variations', 'error');
+        }
+    }
+
+    displayColorVariations(variations) {
+        const container = document.getElementById('color-variations');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        variations.forEach(variation => {
+            const variationItem = document.createElement('div');
+            variationItem.className = 'variation-item';
+            variationItem.innerHTML = `
+                <div class="color-swatch" style="background-color: ${variation.hex}"></div>
+                <div class="variation-info">
+                    <div class="variation-name">${variation.name}</div>
+                    <div class="variation-hex">${variation.hex}</div>
+                </div>
+            `;
+            container.appendChild(variationItem);
+        });
+    }
+
+    copyColorToClipboard(hex) {
+        navigator.clipboard.writeText(hex).then(() => {
+            this.showStatusMessage(`Copied ${hex} to clipboard`);
+        }).catch(() => {
+            this.showStatusMessage('Failed to copy color', 'error');
+        });
     }
 }
 

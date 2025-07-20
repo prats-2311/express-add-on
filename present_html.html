@@ -347,6 +347,63 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Color Palette Extractor & Manager -->
+            <div class="section">
+                <h3>🎨 Color Palette Extractor & Manager</h3>
+                
+                <!-- Color Extraction -->
+                <div class="control-group">
+                    <label>Extract Colors from Selected Elements:</label>
+                    <button id="extract-colors">Extract Colors</button>
+                </div>
+
+                <div class="control-group">
+                    <label>Extracted Colors:</label>
+                    <div id="extracted-colors" class="extracted-colors">
+                        <p class="no-colors">Select elements and click "Extract Colors"</p>
+                    </div>
+                </div>
+
+                <!-- Save Palette -->
+                <div class="control-group">
+                    <label>Save as Brand Palette:</label>
+                    <div class="input-group">
+                        <input type="text" id="palette-name" placeholder="Enter palette name...">
+                        <button id="save-palette">Save Palette</button>
+                    </div>
+                </div>
+
+                <!-- Color Variations -->
+                <div class="control-group">
+                    <label>Generate Color Variations:</label>
+                    <div class="input-group">
+                        <select id="variation-type">
+                            <option value="tints">Tints (Lighter)</option>
+                            <option value="shades">Shades (Darker)</option>
+                            <option value="complementary">Complementary</option>
+                        </select>
+                        <button id="generate-variations">Generate</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Color Variations:</label>
+                    <div id="color-variations" class="color-variations"></div>
+                </div>
+
+                <!-- Saved Palettes -->
+                <div class="control-group">
+                    <label>Saved Brand Palettes:</label>
+                    <div id="saved-palettes" class="saved-palettes">
+                        <p class="no-palettes">No saved palettes</p>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <button id="apply-palette">Apply Selected Palette</button>
+                </div>
+            </div>
         </div>
     </div>
     <script type="module" src="present_iframe.js"></script>

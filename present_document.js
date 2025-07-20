@@ -901,6 +901,282 @@ function start() {
                 const color1 = sandboxApi.parseColor(patternData.color1);
                 return color1 ? editor.makeColorFill(color1) : null;
             }
+        },
+
+        // Color Palette Extractor & Manager
+        extractColorsFromSelected: async () => {
+            const selection = Array.from(editor.context.selection);
+            if (selection.length === 0) {
+                return { success: false, message: 'No element selected' };
+            }
+
+            const extractedColors = [];
+            
+            for (const element of selection) {
+                try {
+                    // Extract color from fill
+                    if (element.fill && element.fill.color) {
+                        const color = element.fill.color;
+                        const hexColor = sandboxApi.rgbaToHex(color);
+                        
+                        if (!extractedColors.some(c => c.hex === hexColor)) {
+                            extractedColors.push({
+                                hex: hexColor,
+                                rgba: color,
+                                source: element.text ? 'Text Element' : 'Shape Element',
+                                elementId: element.id
+                            });
+                        }
+                    }
+
+                    // For text elements, also check text color if available
+                    if (element.text && element.textColor) {
+                        const color = element.textColor;
+                        const hexColor = sandboxApi.rgbaToHex(color);
+                        
+                        if (!extractedColors.some(c => c.hex === hexColor)) {
+                            extractedColors.push({
+                                hex: hexColor,
+                                rgba: color,
+                                source: 'Text Color',
+                                elementId: element.id
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error extracting color from element:', error);
+                }
+            }
+
+            return {
+                success: true,
+                colors: extractedColors,
+                message: `Extracted ${extractedColors.length} unique colors`
+            };
+        },
+
+        saveBrandPalette: async (paletteName, colors) => {
+            try {
+                // Get existing palettes from localStorage
+                const existingPalettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
+                
+                const newPalette = {
+                    id: Date.now(),
+                    name: paletteName,
+                    colors: colors,
+                    createdAt: new Date().toISOString(),
+                    elementCount: colors.length
+                };
+
+                existingPalettes.push(newPalette);
+                localStorage.setItem('brandPalettes', JSON.stringify(existingPalettes));
+
+                return { success: true, palette: newPalette };
+            } catch (error) {
+                console.error('Failed to save brand palette:', error);
+                return { success: false, message: 'Failed to save palette' };
+            }
+        },
+
+        getBrandPalettes: async () => {
+            try {
+                const palettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
+                return { success: true, palettes: palettes };
+            } catch (error) {
+                console.error('Failed to get brand palettes:', error);
+                return { success: false, palettes: [] };
+            }
+        },
+
+        deleteBrandPalette: async (paletteId) => {
+            try {
+                const palettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
+                const filteredPalettes = palettes.filter(p => p.id !== paletteId);
+                localStorage.setItem('brandPalettes', JSON.stringify(filteredPalettes));
+                return { success: true };
+            } catch (error) {
+                console.error('Failed to delete brand palette:', error);
+                return { success: false };
+            }
+        },
+
+        applyBrandPaletteToSelected: async (palette) => {
+            const selection = Array.from(editor.context.selection);
+            if (selection.length === 0) {
+                return { success: false, message: 'No elements selected' };
+            }
+
+            if (!palette.colors || palette.colors.length === 0) {
+                return { success: false, message: 'Palette has no colors' };
+            }
+
+            let appliedCount = 0;
+
+            for (let i = 0; i < selection.length; i++) {
+                const element = selection[i];
+                // Cycle through palette colors
+                const colorIndex = i % palette.colors.length;
+                const color = palette.colors[colorIndex];
+
+                try {
+                    if (element.fill !== undefined) {
+                        element.fill = editor.makeColorFill(color.rgba);
+                        appliedCount++;
+                    }
+                } catch (error) {
+                    console.error('Failed to apply color to element:', error);
+                }
+            }
+
+            return {
+                success: appliedCount > 0,
+                message: `Applied palette colors to ${appliedCount} elements`,
+                appliedCount: appliedCount
+            };
+        },
+
+        generateColorVariations: async (baseColor, variationType = 'tints') => {
+            try {
+                const variations = [];
+                const baseRgba = typeof baseColor === 'string' ? 
+                    sandboxApi.parseColor(baseColor) : baseColor;
+
+                if (!baseRgba) {
+                    return { success: false, message: 'Invalid base color' };
+                }
+
+                switch (variationType) {
+                    case 'tints':
+                        // Lighter variations (adding white)
+                        for (let i = 1; i <= 5; i++) {
+                            const factor = i * 0.15;
+                            variations.push({
+                                hex: sandboxApi.rgbaToHex({
+                                    red: Math.min(1, baseRgba.red + (1 - baseRgba.red) * factor),
+                                    green: Math.min(1, baseRgba.green + (1 - baseRgba.green) * factor),
+                                    blue: Math.min(1, baseRgba.blue + (1 - baseRgba.blue) * factor),
+                                    alpha: baseRgba.alpha
+                                }),
+                                rgba: {
+                                    red: Math.min(1, baseRgba.red + (1 - baseRgba.red) * factor),
+                                    green: Math.min(1, baseRgba.green + (1 - baseRgba.green) * factor),
+                                    blue: Math.min(1, baseRgba.blue + (1 - baseRgba.blue) * factor),
+                                    alpha: baseRgba.alpha
+                                },
+                                name: `Tint ${i}`
+                            });
+                        }
+                        break;
+
+                    case 'shades':
+                        // Darker variations (adding black)
+                        for (let i = 1; i <= 5; i++) {
+                            const factor = i * 0.15;
+                            variations.push({
+                                hex: sandboxApi.rgbaToHex({
+                                    red: Math.max(0, baseRgba.red * (1 - factor)),
+                                    green: Math.max(0, baseRgba.green * (1 - factor)),
+                                    blue: Math.max(0, baseRgba.blue * (1 - factor)),
+                                    alpha: baseRgba.alpha
+                                }),
+                                rgba: {
+                                    red: Math.max(0, baseRgba.red * (1 - factor)),
+                                    green: Math.max(0, baseRgba.green * (1 - factor)),
+                                    blue: Math.max(0, baseRgba.blue * (1 - factor)),
+                                    alpha: baseRgba.alpha
+                                },
+                                name: `Shade ${i}`
+                            });
+                        }
+                        break;
+
+                    case 'complementary':
+                        // Complementary and analogous colors
+                        const hsl = sandboxApi.rgbaToHsl(baseRgba);
+                        const complementaryHue = (hsl.h + 180) % 360;
+                        const analogous1 = (hsl.h + 30) % 360;
+                        const analogous2 = (hsl.h - 30 + 360) % 360;
+
+                        [complementaryHue, analogous1, analogous2].forEach((hue, index) => {
+                            const rgba = sandboxApi.hslToRgba({ h: hue, s: hsl.s, l: hsl.l });
+                            variations.push({
+                                hex: sandboxApi.rgbaToHex(rgba),
+                                rgba: rgba,
+                                name: index === 0 ? 'Complementary' : `Analogous ${index}`
+                            });
+                        });
+                        break;
+                }
+
+                return { success: true, variations: variations };
+            } catch (error) {
+                console.error('Failed to generate color variations:', error);
+                return { success: false, message: 'Failed to generate variations' };
+            }
+        },
+
+        // Color utility functions
+        rgbaToHex: (rgba) => {
+            const toHex = (value) => {
+                const hex = Math.round(value * 255).toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            };
+            
+            return `#${toHex(rgba.red)}${toHex(rgba.green)}${toHex(rgba.blue)}`;
+        },
+
+        rgbaToHsl: (rgba) => {
+            const r = rgba.red;
+            const g = rgba.green;
+            const b = rgba.blue;
+
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0; // achromatic
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+
+            return { h: h * 360, s: s, l: l };
+        },
+
+        hslToRgba: (hsl) => {
+            const h = hsl.h / 360;
+            const s = hsl.s;
+            const l = hsl.l;
+
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+
+            let r, g, b;
+
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+
+            return { red: r, green: g, blue: b, alpha: 1 };
         }
     };
 
