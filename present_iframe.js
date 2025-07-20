@@ -5,6 +5,11 @@ class PrecisionToolkit {
         this.sandboxProxy = null;
         this.selectedElements = [];
         this.selectionMonitor = null;
+        this.selectedPattern = 'geometric';
+        this.patternCanvas = null;
+        this.patternCtx = null;
+        this.currentExtractedColors = [];
+        this.currentColorVariations = [];
     }
 
     async init() {
@@ -1444,36 +1449,45 @@ class PrecisionToolkit {
     }
 
     async saveBrandPalette() {
-        const paletteName = document.getElementById('palette-name')?.value.trim();
+        const paletteName = document.getElementById('palette-name')?.value?.trim();
         
         if (!paletteName) {
             this.showStatusMessage('Please enter a palette name', 'error');
             return;
         }
 
-        if (!this.currentExtractedColors || this.currentExtractedColors.length === 0) {
-            this.showStatusMessage('No colors to save. Extract colors first.', 'error');
+        // Check if we have color variations displayed, use those instead of extracted colors
+        const variationsContainer = document.getElementById('color-variations');
+        let colorsToSave = [];
+
+        if (variationsContainer && variationsContainer.children.length > 0) {
+            // Save the generated variations
+            colorsToSave = this.currentColorVariations || [];
+            console.log('Saving color variations:', colorsToSave);
+        } else if (this.currentExtractedColors && this.currentExtractedColors.length > 0) {
+            // Save the extracted colors
+            colorsToSave = this.currentExtractedColors;
+            console.log('Saving extracted colors:', colorsToSave);
+        } else {
+            this.showStatusMessage('No colors to save. Extract colors or generate variations first.', 'error');
             return;
         }
 
         try {
-            // Handle palette saving directly in iframe
-            const existingPalettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
+            const result = await this.sandboxProxy.saveBrandPalette(paletteName, colorsToSave);
             
-            const newPalette = {
-                id: Date.now(),
-                name: paletteName,
-                colors: this.currentExtractedColors,
-                createdAt: new Date().toISOString(),
-                elementCount: this.currentExtractedColors.length
-            };
-
-            existingPalettes.push(newPalette);
-            localStorage.setItem('brandPalettes', JSON.stringify(existingPalettes));
-
-            this.showStatusMessage(`Palette "${paletteName}" saved successfully!`);
-            document.getElementById('palette-name').value = '';
-            this.loadBrandPalettes();
+            if (result.success) {
+                // Save to localStorage
+                const existingPalettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
+                existingPalettes.push(result.palette);
+                localStorage.setItem('brandPalettes', JSON.stringify(existingPalettes));
+                
+                this.showStatusMessage(`Palette "${paletteName}" saved successfully`);
+                document.getElementById('palette-name').value = '';
+                this.loadBrandPalettes();
+            } else {
+                this.showStatusMessage(result.message, 'error');
+            }
         } catch (error) {
             console.error('Failed to save palette:', error);
             this.showStatusMessage('Failed to save palette', 'error');
@@ -1588,6 +1602,8 @@ class PrecisionToolkit {
             const result = await this.sandboxProxy.generateColorVariations(baseColor.rgba, variationType);
             
             if (result.success) {
+                // Store the variations for saving
+                this.currentColorVariations = result.variations;
                 this.displayColorVariations(result.variations);
                 this.showStatusMessage(`Generated ${result.variations.length} color variations`);
             } else {
@@ -1605,7 +1621,7 @@ class PrecisionToolkit {
 
         container.innerHTML = '';
 
-        variations.forEach(variation => {
+        variations.forEach((variation, index) => {
             const variationItem = document.createElement('div');
             variationItem.className = 'variation-item';
             variationItem.innerHTML = `
@@ -1614,9 +1630,47 @@ class PrecisionToolkit {
                     <div class="variation-name">${variation.name}</div>
                     <div class="variation-hex">${variation.hex}</div>
                 </div>
+                <button class="save-single-color" data-index="${index}">Save</button>
             `;
+            
+            // Add click handler for individual color saving
+            const saveBtn = variationItem.querySelector('.save-single-color');
+            saveBtn.addEventListener('click', () => {
+                this.saveSingleColorVariation(variation);
+            });
+            
             container.appendChild(variationItem);
         });
+    }
+
+    async saveSingleColorVariation(colorVariation) {
+        const paletteName = colorVariation.hex; // Use hex as palette name
+        
+        try {
+            const colorToSave = [{
+                hex: colorVariation.hex,
+                rgba: colorVariation.rgba,
+                source: 'Color Variation',
+                name: colorVariation.name
+            }];
+
+            const result = await this.sandboxProxy.saveBrandPalette(paletteName, colorToSave);
+            
+            if (result.success) {
+                // Save to localStorage
+                const existingPalettes = JSON.parse(localStorage.getItem('brandPalettes') || '[]');
+                existingPalettes.push(result.palette);
+                localStorage.setItem('brandPalettes', JSON.stringify(existingPalettes));
+                
+                this.showStatusMessage(`Color ${colorVariation.hex} saved as palette`);
+                this.loadBrandPalettes();
+            } else {
+                this.showStatusMessage(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Failed to save single color:', error);
+            this.showStatusMessage('Failed to save color', 'error');
+        }
     }
 
     copyColorToClipboard(hex) {
