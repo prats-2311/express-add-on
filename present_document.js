@@ -232,7 +232,7 @@ function start() {
 
                 console.log('Detected element type:', elementType);
 
-                // Capture more detailed element data
+                // Capture comprehensive element data
                 const assetData = {
                     id: element.id,
                     type: elementType,
@@ -244,14 +244,22 @@ function start() {
                     }
                 };
 
-                // Add type-specific properties
+                // Add type-specific properties with comprehensive styling
                 if (elementType === 'Text') {
                     assetData.properties.text = element.text || 'Sample Text';
                     assetData.properties.fontSize = element.fontSize || 16;
-                    console.log('Captured text:', assetData.properties.text);
+                    
+                    // Capture text styling
+                    if (element.fontFamily) assetData.properties.fontFamily = element.fontFamily;
+                    if (element.fontWeight) assetData.properties.fontWeight = element.fontWeight;
+                    if (element.fontStyle) assetData.properties.fontStyle = element.fontStyle;
+                    if (element.textAlign) assetData.properties.textAlign = element.textAlign;
+                    if (element.lineHeight) assetData.properties.lineHeight = element.lineHeight;
+                    
+                    console.log('Captured text:', assetData.properties.text, 'fontSize:', assetData.properties.fontSize);
                 }
 
-                // Try to capture fill color
+                // Try to capture fill color and other visual properties
                 if (element.fill) {
                     try {
                         assetData.properties.fillColor = {
@@ -264,6 +272,34 @@ function start() {
                     } catch (e) {
                         console.log('Could not capture fill color:', e);
                     }
+                }
+
+                // Capture stroke properties
+                if (element.stroke) {
+                    try {
+                        assetData.properties.stroke = {
+                            color: {
+                                red: element.stroke.color?.red || 0,
+                                green: element.stroke.color?.green || 0,
+                                blue: element.stroke.color?.blue || 0,
+                                alpha: element.stroke.color?.alpha || 1
+                            },
+                            width: element.stroke.width || 1
+                        };
+                        console.log('Captured stroke:', assetData.properties.stroke);
+                    } catch (e) {
+                        console.log('Could not capture stroke:', e);
+                    }
+                }
+
+                // Capture opacity
+                if (element.opacity !== undefined) {
+                    assetData.properties.opacity = element.opacity;
+                }
+
+                // Capture rotation
+                if (element.rotation !== undefined) {
+                    assetData.properties.rotation = element.rotation;
                 }
 
                 console.log('Final captured asset data:', assetData);
@@ -295,20 +331,50 @@ function start() {
                             console.log('Set text:', assetData.properties.text);
                         }
 
+                        // Apply comprehensive text styling
                         if (assetData.properties && assetData.properties.fontSize) {
                             newElement.fontSize = assetData.properties.fontSize;
                             console.log('Set fontSize:', assetData.properties.fontSize);
+                        }
+                        
+                        // Only set text properties that exist
+                        if (assetData.properties && assetData.properties.fontFamily) {
+                            try {
+                                newElement.fontFamily = assetData.properties.fontFamily;
+                            } catch (e) {
+                                console.log('Could not set fontFamily:', e);
+                            }
                         }
                         break;
 
                     case 'Rectangle':
                         console.log('Creating rectangle element...');
                         newElement = editor.createRectangle();
+                        
+                        // Set size for rectangles
+                        if (assetData.properties && assetData.properties.width) {
+                            newElement.width = assetData.properties.width;
+                            console.log('Set width:', assetData.properties.width);
+                        }
+                        if (assetData.properties && assetData.properties.height) {
+                            newElement.height = assetData.properties.height;
+                            console.log('Set height:', assetData.properties.height);
+                        }
                         break;
 
                     case 'Ellipse':
                         console.log('Creating ellipse element...');
                         newElement = editor.createEllipse();
+                        
+                        // Set size for ellipses
+                        if (assetData.properties && assetData.properties.width) {
+                            newElement.width = assetData.properties.width;
+                            console.log('Set width:', assetData.properties.width);
+                        }
+                        if (assetData.properties && assetData.properties.height) {
+                            newElement.height = assetData.properties.height;
+                            console.log('Set height:', assetData.properties.height);
+                        }
                         break;
 
                     default:
@@ -317,17 +383,7 @@ function start() {
                 }
 
                 if (newElement) {
-                    console.log('Element created successfully, setting properties...');
-
-                    // Set size
-                    if (assetData.properties && assetData.properties.width) {
-                        newElement.width = assetData.properties.width;
-                        console.log('Set width:', assetData.properties.width);
-                    }
-                    if (assetData.properties && assetData.properties.height) {
-                        newElement.height = assetData.properties.height;
-                        console.log('Set height:', assetData.properties.height);
-                    }
+                    console.log('Element created successfully, setting position...');
 
                     // Set position (with slight offset so it doesn't overlap exactly)
                     const x = (assetData.properties && assetData.properties.x) ? assetData.properties.x + 20 : 50;
@@ -336,7 +392,7 @@ function start() {
                     newElement.translation = { x, y };
                     console.log('Set position:', x, y);
 
-                    // Try to restore fill color
+                    // Apply fill color
                     if (assetData.properties && assetData.properties.fillColor) {
                         try {
                             newElement.fill = editor.makeColorFill(assetData.properties.fillColor);
@@ -346,8 +402,38 @@ function start() {
                         }
                     }
 
+                    // Apply stroke (only for shapes, not text)
+                    if (assetData.type !== 'Text' && assetData.properties && assetData.properties.stroke) {
+                        try {
+                            newElement.stroke = editor.makeStroke(assetData.properties.stroke);
+                            console.log('Set stroke:', assetData.properties.stroke);
+                        } catch (e) {
+                            console.log('Could not restore stroke:', e);
+                        }
+                    }
+
+                    // Apply opacity
+                    if (assetData.properties && assetData.properties.opacity !== undefined) {
+                        try {
+                            newElement.opacity = assetData.properties.opacity;
+                            console.log('Set opacity:', assetData.properties.opacity);
+                        } catch (e) {
+                            console.log('Could not set opacity:', e);
+                        }
+                    }
+
+                    // Apply rotation
+                    if (assetData.properties && assetData.properties.rotation !== undefined) {
+                        try {
+                            newElement.rotation = assetData.properties.rotation;
+                            console.log('Set rotation:', assetData.properties.rotation);
+                        } catch (e) {
+                            console.log('Could not set rotation:', e);
+                        }
+                    }
+
                     editor.context.insertionParent.children.append(newElement);
-                    console.log('Element added to document successfully');
+                    console.log('Element added to document successfully with styling');
                     return newElement.id;
                 } else {
                     console.error('Failed to create element');
@@ -362,45 +448,54 @@ function start() {
 
         createBulkTextElement: (config) => {
             try {
+                console.log('Creating bulk text element with config:', config);
+                
                 const textElement = editor.createText();
                 textElement.text = config.text || 'Sample Text';
                 textElement.fontSize = config.fontSize || 16;
 
-                if (config.width) textElement.width = config.width;
-                if (config.height) textElement.height = config.height;
+                // Adobe Express canvas is typically 1080x1080 for social media
+                // Keep elements within safe bounds: 50-1000 for x, 50-1000 for y
+                const canvasWidth = 1080;
+                const canvasHeight = 1080;
+                const margin = 50;
+                
+                const x = Math.max(margin, Math.min(canvasWidth - 200, config.x || 50));
+                const y = Math.max(margin, Math.min(canvasHeight - 100, config.y || 50));
+                
+                textElement.translation = { x, y };
+                console.log(`Positioned text "${config.text}" at (${x}, ${y})`);
 
-                textElement.translation = {
-                    x: config.x || 50,
-                    y: config.y || 50
-                };
+                // Set color if provided
+                if (config.color && config.color !== 'black') {
+                    try {
+                        const colorMap = {
+                            'red': { red: 1, green: 0, blue: 0, alpha: 1 },
+                            'blue': { red: 0, green: 0, blue: 1, alpha: 1 },
+                            'green': { red: 0, green: 1, blue: 0, alpha: 1 },
+                            'purple': { red: 0.5, green: 0, blue: 0.5, alpha: 1 },
+                            'orange': { red: 1, green: 0.5, blue: 0, alpha: 1 },
+                            'pink': { red: 1, green: 0.75, blue: 0.8, alpha: 1 },
+                            'yellow': { red: 1, green: 1, blue: 0, alpha: 1 },
+                            'gray': { red: 0.5, green: 0.5, blue: 0.5, alpha: 1 }
+                        };
 
-                editor.context.insertionParent.children.append(textElement);
-
-                // Apply color AFTER adding to document
-                if (config.color) {
-                    const color = sandboxApi.parseColor(config.color);
-                    if (color) {
-                        try {
-                            // Try multiple ways to apply color to text
-                            textElement.fill = editor.makeColorFill(color);
-
-                            // Also try setting text color directly if available
-                            if (textElement.textColor !== undefined) {
-                                textElement.textColor = color;
-                            }
-
-                            console.log('Applied color during creation:', config.color, color);
-                        } catch (e) {
-                            console.log('Error applying color:', e);
-                        }
+                        const colorValue = colorMap[config.color.toLowerCase()] || { red: 0, green: 0, blue: 0, alpha: 1 };
+                        textElement.fill = editor.makeColorFill(colorValue);
+                        console.log('Applied color:', config.color, colorValue);
+                    } catch (colorError) {
+                        console.log('Could not apply color:', colorError);
                     }
                 }
 
-                console.log('Created text element:', config.text, 'at', config.x, config.y);
-                return textElement.id;
+                // Add to document
+                editor.context.insertionParent.children.append(textElement);
+                console.log('Bulk text element created successfully:', textElement.text);
+                
+                return { success: true, elementId: textElement.id };
             } catch (error) {
                 console.error('Failed to create bulk text element:', error);
-                return null;
+                return { success: false, message: error.message };
             }
         },
 
@@ -1165,6 +1260,27 @@ function start() {
             }
 
             return { red: r, green: g, blue: b, alpha: 1 };
+        },
+
+        clearAllElements: () => {
+            try {
+                const insertionParent = editor.context.insertionParent;
+                const elements = Array.from(insertionParent.children);
+                
+                elements.forEach(element => {
+                    try {
+                        insertionParent.children.remove(element);
+                    } catch (e) {
+                        console.log('Could not remove element:', e);
+                    }
+                });
+                
+                console.log(`Cleared ${elements.length} elements from canvas`);
+                return { success: true, clearedCount: elements.length };
+            } catch (error) {
+                console.error('Failed to clear elements:', error);
+                return { success: false, message: error.message };
+            }
         }
     };
 

@@ -893,11 +893,12 @@ class PrecisionToolkit {
     displayCsvPreview(headers, previewData) {
         const headersDiv = document.getElementById('csv-headers');
         const dataDiv = document.getElementById('csv-data');
+        const mappingDiv = document.getElementById('column-mapping');
 
         // Show headers
         headersDiv.innerHTML = `<strong>Headers:</strong> ${headers.join(', ')}`;
 
-        // Show preview data
+        // Show preview data table
         const table = document.createElement('table');
         table.className = 'csv-table';
 
@@ -909,8 +910,8 @@ class PrecisionToolkit {
             headerRow.appendChild(th);
         });
 
-        // Data rows
-        previewData.forEach(row => {
+        // Data rows (first 3 for preview)
+        previewData.slice(0, 3).forEach(row => {
             const dataRow = table.insertRow();
             row.forEach(cell => {
                 const td = dataRow.insertCell();
@@ -921,8 +922,33 @@ class PrecisionToolkit {
         dataDiv.innerHTML = '';
         dataDiv.appendChild(table);
 
-        // Show mapping controls
-        this.showColumnMapping(headers);
+        // Create column mapping controls
+        mappingDiv.innerHTML = '<h4>Map CSV Columns to Element Properties:</h4>';
+        
+        headers.forEach(header => {
+            const mappingRow = document.createElement('div');
+            mappingRow.className = 'mapping-row';
+            mappingRow.innerHTML = `
+                <label>${header}:</label>
+                <select data-column="${header}">
+                    <option value="">-- Select Property --</option>
+                    <option value="title">Title Text</option>
+                    <option value="subtitle">Subtitle Text</option>
+                    <option value="text">Text Content</option>
+                    <option value="color">Text Color</option>
+                    <option value="fontSize">Font Size</option>
+                    <option value="x-position">X Position</option>
+                    <option value="y-position">Y Position</option>
+                    <option value="width">Width</option>
+                    <option value="height">Height</option>
+                </select>
+            `;
+            mappingDiv.appendChild(mappingRow);
+        });
+
+        // Show the mapping controls and preview
+        document.getElementById('csv-preview').classList.remove('hidden');
+        document.getElementById('mapping-controls').classList.remove('hidden');
     }
 
     showColumnMapping(headers) {
@@ -953,7 +979,7 @@ class PrecisionToolkit {
 
     async generateBulkContent() {
         if (!this.csvData) {
-            console.error('Please upload a CSV file first');
+            this.showStatusMessage('Please upload a CSV file first', 'error');
             return;
         }
 
@@ -965,83 +991,130 @@ class PrecisionToolkit {
         });
 
         if (Object.keys(mappings).length === 0) {
-            console.error('Please map at least one column to an element property');
+            this.showStatusMessage('Please map at least one column to an element property', 'error');
             return;
         }
 
-        const maxItems = Math.min(this.csvData.data.length, 10);
+        // Clear existing elements first (optional - you can comment this out)
+        try {
+            const clearResult = await this.sandboxProxy.clearAllElements();
+            if (clearResult.success) {
+                console.log(`Cleared ${clearResult.clearedCount} existing elements`);
+            }
+        } catch (e) {
+            console.log('Could not clear elements:', e);
+        }
+
+        const maxItems = Math.min(this.csvData.data.length, 12); // Limit to 12 items for 3x4 grid
         let createdElements = 0;
-        let startY = 50;
 
         console.log('Starting bulk generation with mappings:', mappings);
+        console.log('CSV headers:', this.csvData.headers);
+        console.log('CSV data rows:', this.csvData.data.length);
+
+        this.showStatusMessage('Generating content from CSV data...', 'info');
 
         for (let i = 0; i < maxItems; i++) {
             const row = this.csvData.data[i];
             const elementData = {};
 
             // Process each mapped column
-            this.csvData.headers.forEach((header, index) => {
-                if (mappings[header] && row[index]) {
-                    elementData[mappings[header]] = row[index].trim();
+            this.csvData.headers.forEach((header, headerIndex) => {
+                if (mappings[header] && row[headerIndex]) {
+                    const value = row[headerIndex].trim();
+                    elementData[mappings[header]] = value;
+                    console.log(`Row ${i}: Mapping ${header} -> ${mappings[header]}: ${value}`);
                 }
             });
 
-            console.log('Processing row', i, 'with data:', elementData);
+            console.log(`Processing row ${i} with data:`, elementData);
+
+            // Add a small delay between creations to avoid overlap
+            if (i > 0) {
+                await new Promise(resolve => setTimeout(resolve, 150));
+            }
 
             // Create elements based on mapped data
-            await this.createElementFromData(elementData, i, startY + (i * 80));
+            await this.createElementFromData(elementData, i);
             createdElements++;
         }
 
-        console.log(`Generated ${createdElements} content variations from CSV data!`);
+        this.showStatusMessage(`Successfully generated ${createdElements} content variations from CSV data!`);
     }
 
-    async createElementFromData(data, index, yPosition) {
-        const xPosition = 50 + (index % 3) * 200;
+    async createElementFromData(data, index) {
+        // Adobe Express canvas dimensions (typical social media format)
+        const canvasWidth = 1080;
+        const canvasHeight = 1080;
+        
+        // Calculate grid position within canvas bounds
+        const margin = 80;
+        const elementWidth = 200;
+        const elementHeight = 60;
+        const spacing = 220; // Horizontal spacing between elements
+        const rowHeight = 120; // Vertical spacing between rows
+        
+        const columns = Math.floor((canvasWidth - 2 * margin) / spacing); // Calculate max columns
+        const maxColumns = Math.min(columns, 4); // Limit to 4 columns max
+        
+        const col = index % maxColumns;
+        const row = Math.floor(index / maxColumns);
+        
+        const xPosition = margin + col * spacing;
+        const yPosition = margin + row * rowHeight;
 
-        // Debug: log the actual data being processed
-        console.log('Processing row', index, 'with data:', data);
+        // Ensure we don't go outside canvas bounds
+        const finalX = Math.min(xPosition, canvasWidth - elementWidth - margin);
+        const finalY = Math.min(yPosition, canvasHeight - elementHeight - margin);
 
-        // Create text elements - ensure we have valid text content
-        if (data.text || data.title || data.subtitle) {
-            const textContent = (data.text || data.title || data.subtitle || '').trim();
+        console.log(`Creating element ${index} at grid position (${col}, ${row}) = (${finalX}, ${finalY})`);
+        console.log('Element data:', data);
 
-            if (textContent) {
-                // Use either 'color' or 'background' field for color
-                const colorValue = data.color || data.background;
-                console.log('Creating text element with content:', textContent, 'color:', colorValue);
+        try {
+            // Use CSV coordinates if provided, otherwise use calculated grid position
+            const useCSVPosition = data['x-position'] && data['y-position'];
+            const x = useCSVPosition ? parseInt(data['x-position']) : finalX;
+            const y = useCSVPosition ? parseInt(data['y-position']) : finalY;
 
-                const elementId = await this.sandboxProxy.createBulkTextElement({
-                    text: textContent,
-                    x: parseInt(data['x-position']) || xPosition,
-                    y: parseInt(data['y-position']) || yPosition,
-                    fontSize: data.title ? 24 : 16,
-                    width: parseInt(data.width) || 150,
-                    height: parseInt(data.height) || 40,
-                    color: colorValue // Pass the color value
-                });
-
-                console.log('Element created with ID:', elementId);
-
-                // Additional attempt to apply color if element was created
-                if (colorValue && elementId) {
-                    console.log('Attempting to apply color', colorValue, 'to element', elementId);
-                    const colorResult = await this.sandboxProxy.applyColorToElement(elementId, colorValue);
-                    console.log('Color application result:', colorResult);
-                }
-            }
-        }
-        // Create rectangle if we have size/position data but no text
-        else if (data.width || data.height || data['x-position'] || data['y-position']) {
-            const colorValue = data.color || data.background;
-            const elementId = await this.sandboxProxy.createBulkRectangle({
-                x: parseInt(data['x-position']) || xPosition,
-                y: parseInt(data['y-position']) || yPosition,
-                width: parseInt(data.width) || 100,
-                height: parseInt(data.height) || 80,
-                color: colorValue
+            // Create main text element (title or main text)
+            const mainText = data.title || data.text || `Item ${index + 1}`;
+            
+            const result = await this.sandboxProxy.createBulkTextElement({
+                text: mainText,
+                fontSize: parseInt(data.fontSize) || 18,
+                x: x,
+                y: y,
+                width: parseInt(data.width) || elementWidth,
+                height: parseInt(data.height) || elementHeight,
+                color: data.color || 'black'
             });
-            console.log('Rectangle created with ID:', elementId);
+
+            if (result.success) {
+                console.log(`Successfully created main text: "${mainText}" at (${x}, ${y})`);
+                
+                // Create subtitle if it exists and is different from title
+                if (data.subtitle && data.subtitle !== data.title) {
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+                    
+                    const subtitleResult = await this.sandboxProxy.createBulkTextElement({
+                        text: data.subtitle,
+                        fontSize: (parseInt(data.fontSize) || 18) - 4,
+                        x: x,
+                        y: y + 35, // Position below main text
+                        width: parseInt(data.width) || elementWidth,
+                        height: parseInt(data.height) || 30,
+                        color: 'gray'
+                    });
+                    
+                    if (subtitleResult.success) {
+                        console.log(`Successfully created subtitle: "${data.subtitle}"`);
+                    }
+                }
+            } else {
+                console.error('Failed to create text element:', result.message);
+            }
+        } catch (error) {
+            console.error('Error creating element from data:', error);
         }
     }
 
