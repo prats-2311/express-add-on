@@ -10,6 +10,20 @@ class PrecisionToolkit {
         this.patternCtx = null;
         this.currentExtractedColors = [];
         this.currentColorVariations = [];
+        
+        // Phase 1 Features State
+        this.gridEnabled = false;
+        this.rulersEnabled = false;
+        this.snapToGridEnabled = false;
+        this.smartGuidesEnabled = false;
+        this.centerGuidesEnabled = false;
+        this.marginGuidesEnabled = false;
+        this.gridSize = 20;
+        this.gridOpacity = 0.3;
+        this.guideColor = '#ff0066';
+        this.snapTolerance = 10;
+        this.layerList = [];
+        this.selectedLayerId = null;
     }
 
     async init() {
@@ -80,6 +94,12 @@ class PrecisionToolkit {
         this.setupTextEffects();
         this.setupGranularControls();
         this.setupColorPaletteManager();
+        
+        // Phase 1 Features
+        this.setupRulersAndGrid();
+        this.setupLayerManagement();
+        this.setupSmartGuides();
+        
         this.startSelectionMonitoring();
     }
 
@@ -1752,6 +1772,867 @@ class PrecisionToolkit {
         }).catch(() => {
             this.showStatusMessage('Failed to copy color', 'error');
         });
+    }
+
+    // ==================== PHASE 1 FEATURES ====================
+    
+    // Visual Rulers & Grid System
+    setupRulersAndGrid() {
+        // Grid size control
+        const gridSizeInput = document.getElementById('grid-size');
+        const gridOpacitySlider = document.getElementById('grid-opacity');
+        const gridOpacityValue = document.getElementById('grid-opacity-value');
+        
+        gridSizeInput?.addEventListener('input', (e) => {
+            this.gridSize = parseInt(e.target.value);
+            this.updateGridDisplay();
+        });
+        
+        gridOpacitySlider?.addEventListener('input', (e) => {
+            this.gridOpacity = parseInt(e.target.value) / 100;
+            gridOpacityValue.textContent = e.target.value + '%';
+            this.updateGridDisplay();
+        });
+        
+        // Toggle buttons
+        document.getElementById('toggle-grid')?.addEventListener('click', () => {
+            this.toggleGrid();
+        });
+        
+        document.getElementById('toggle-rulers')?.addEventListener('click', () => {
+            this.toggleRulers();
+        });
+        
+        document.getElementById('toggle-snap')?.addEventListener('click', () => {
+            this.toggleSnapToGrid();
+        });
+        
+        // Measurement tools
+        document.getElementById('measure-distance')?.addEventListener('click', () => {
+            this.activateMeasureTool();
+        });
+        
+        document.getElementById('show-dimensions')?.addEventListener('click', () => {
+            this.toggleDimensionDisplay();
+        });
+        
+        // Debug button for canvas detection
+        const debugBtn = document.createElement('button');
+        debugBtn.textContent = '🔍 Debug Canvas';
+        debugBtn.className = 'small-btn';
+        debugBtn.style.marginTop = '8px';
+        debugBtn.addEventListener('click', () => {
+            this.debugCanvasDetection();
+        });
+        
+        const gridSection = document.querySelector('.section h3');
+        if (gridSection && gridSection.textContent.includes('Visual Rulers')) {
+            gridSection.parentNode.appendChild(debugBtn);
+        }
+    }
+    
+    toggleGrid() {
+        this.gridEnabled = !this.gridEnabled;
+        const btn = document.getElementById('toggle-grid');
+        
+        if (this.gridEnabled) {
+            btn.classList.add('active');
+            btn.textContent = '🔲 Hide Grid';
+            this.showGrid();
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = '🔲 Show Grid';
+            this.hideGrid();
+        }
+        
+        this.showStatusMessage(`Grid ${this.gridEnabled ? 'enabled' : 'disabled'}`);
+    }
+    
+    toggleRulers() {
+        this.rulersEnabled = !this.rulersEnabled;
+        const btn = document.getElementById('toggle-rulers');
+        
+        if (this.rulersEnabled) {
+            btn.classList.add('active');
+            btn.textContent = '📏 Hide Rulers';
+            this.showRulers();
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = '📏 Show Rulers';
+            this.hideRulers();
+        }
+        
+        this.showStatusMessage(`Rulers ${this.rulersEnabled ? 'enabled' : 'disabled'}`);
+    }
+    
+    toggleSnapToGrid() {
+        this.snapToGridEnabled = !this.snapToGridEnabled;
+        const btn = document.getElementById('toggle-snap');
+        
+        if (this.snapToGridEnabled) {
+            btn.classList.add('active');
+            btn.textContent = '🧲 Snap Off';
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = '🧲 Snap to Grid';
+        }
+        
+        this.showStatusMessage(`Snap to Grid ${this.snapToGridEnabled ? 'enabled' : 'disabled'}`);
+    }
+    
+    showGrid() {
+        // Remove existing grid
+        this.hideGrid();
+        
+        // Create grid overlay
+        const gridOverlay = document.createElement('div');
+        gridOverlay.id = 'grid-overlay';
+        gridOverlay.className = 'grid-overlay';
+        
+        // Use a more visible grid pattern with higher opacity
+        const gridColor = `rgba(0, 100, 200, ${Math.max(0.3, this.gridOpacity)})`;
+        const gridPattern = `
+            linear-gradient(to right, ${gridColor} 1px, transparent 1px),
+            linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)
+        `;
+        
+        // Apply base styles - always cover full viewport initially
+        Object.assign(gridOverlay.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100vw',
+            height: '100vh',
+            backgroundImage: gridPattern,
+            backgroundSize: `${this.gridSize}px ${this.gridSize}px`,
+            pointerEvents: 'none',
+            zIndex: '9999'
+        });
+        
+        // Try to find and position over canvas
+        const canvasContainer = this.findCanvasContainer();
+        if (canvasContainer) {
+            const rect = canvasContainer.getBoundingClientRect();
+            console.log('Positioning grid over canvas:', rect);
+            
+            // Position grid over the canvas area
+            Object.assign(gridOverlay.style, {
+                top: rect.top + 'px',
+                left: rect.left + 'px',
+                width: rect.width + 'px',
+                height: rect.height + 'px'
+            });
+            
+            this.showStatusMessage(`Grid positioned over canvas (${Math.round(rect.width)}×${Math.round(rect.height)})`, 'success');
+        } else {
+            this.showStatusMessage('Grid shown over entire window - canvas not detected', 'warning');
+        }
+        
+        document.body.appendChild(gridOverlay);
+        
+        // Update grid position on window changes
+        this.gridResizeHandler = () => {
+            if (canvasContainer) {
+                const rect = canvasContainer.getBoundingClientRect();
+                Object.assign(gridOverlay.style, {
+                    top: rect.top + 'px',
+                    left: rect.left + 'px',
+                    width: rect.width + 'px',
+                    height: rect.height + 'px'
+                });
+            }
+        };
+        
+        window.addEventListener('resize', this.gridResizeHandler);
+        window.addEventListener('scroll', this.gridResizeHandler);
+        
+        // Verify grid is visible
+        setTimeout(() => {
+            const gridElement = document.getElementById('grid-overlay');
+            if (gridElement) {
+                const computedStyle = window.getComputedStyle(gridElement);
+                console.log('Grid element styles:', {
+                    display: computedStyle.display,
+                    visibility: computedStyle.visibility,
+                    opacity: computedStyle.opacity,
+                    zIndex: computedStyle.zIndex,
+                    position: computedStyle.position,
+                    backgroundImage: computedStyle.backgroundImage
+                });
+            }
+        }, 100);
+    }
+    
+    hideGrid() {
+        const existingGrid = document.getElementById('grid-overlay');
+        if (existingGrid) {
+            existingGrid.remove();
+        }
+        
+        // Clean up event listeners
+        if (this.gridResizeHandler) {
+            window.removeEventListener('resize', this.gridResizeHandler);
+            window.removeEventListener('scroll', this.gridResizeHandler);
+            this.gridResizeHandler = null;
+        }
+    }
+    
+    findCanvasContainer() {
+        // Try to find the Adobe Express canvas container
+        // Look for common selectors that might contain the canvas
+        const selectors = [
+            '[data-testid="canvas-container"]',
+            '[data-testid="canvas"]',
+            '.canvas-container',
+            '.artboard',
+            '.design-canvas',
+            'canvas',
+            '[role="img"]',
+            '.workspace-canvas'
+        ];
+        
+        for (const selector of selectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+                // Verify it's likely the main canvas by checking size
+                const rect = element.getBoundingClientRect();
+                if (rect.width > 200 && rect.height > 200) {
+                    console.log('Found canvas container:', selector, rect);
+                    return element;
+                }
+            }
+        }
+        
+        // Fallback: look for the largest element that might be the canvas
+        const allElements = document.querySelectorAll('div, canvas, svg');
+        let largestElement = null;
+        let largestArea = 0;
+        
+        for (const element of allElements) {
+            const rect = element.getBoundingClientRect();
+            const area = rect.width * rect.height;
+            
+            // Look for elements that are likely the main canvas
+            if (area > largestArea && 
+                rect.width > 300 && 
+                rect.height > 300 && 
+                rect.width < window.innerWidth * 0.8 &&
+                rect.height < window.innerHeight * 0.8) {
+                largestArea = area;
+                largestElement = element;
+            }
+        }
+        
+        if (largestElement) {
+            console.log('Found canvas by size:', largestElement, largestElement.getBoundingClientRect());
+        }
+        
+        return largestElement;
+    }
+    
+    updateGridDisplay() {
+        if (this.gridEnabled) {
+            this.showGrid();
+        }
+    }
+    
+    showRulers() {
+        // Remove existing rulers
+        this.hideRulers();
+        
+        // Create horizontal ruler
+        const hRuler = document.createElement('div');
+        hRuler.id = 'horizontal-ruler';
+        hRuler.className = 'ruler-overlay ruler-horizontal';
+        
+        // Create vertical ruler
+        const vRuler = document.createElement('div');
+        vRuler.id = 'vertical-ruler';
+        vRuler.className = 'ruler-overlay ruler-vertical';
+        
+        // Add ruler marks (simplified)
+        for (let i = 0; i < window.innerWidth; i += 50) {
+            const mark = document.createElement('div');
+            mark.className = 'ruler-mark';
+            mark.style.left = i + 'px';
+            mark.style.top = '2px';
+            mark.textContent = i;
+            hRuler.appendChild(mark);
+        }
+        
+        for (let i = 0; i < window.innerHeight; i += 50) {
+            const mark = document.createElement('div');
+            mark.className = 'ruler-mark';
+            mark.style.top = i + 'px';
+            mark.style.left = '2px';
+            mark.textContent = i;
+            vRuler.appendChild(mark);
+        }
+        
+        document.body.appendChild(hRuler);
+        document.body.appendChild(vRuler);
+    }
+    
+    hideRulers() {
+        const hRuler = document.getElementById('horizontal-ruler');
+        const vRuler = document.getElementById('vertical-ruler');
+        if (hRuler) hRuler.remove();
+        if (vRuler) vRuler.remove();
+    }
+    
+    activateMeasureTool() {
+        this.showStatusMessage('Measurement tool activated - Click two points to measure distance', 'info');
+        // This would require more complex implementation with canvas interaction
+    }
+    
+    toggleDimensionDisplay() {
+        this.showStatusMessage('Dimension display toggled', 'info');
+        // This would show dimensions for selected elements
+    }
+    
+    debugCanvasDetection() {
+        console.log('=== CANVAS DEBUG INFO ===');
+        
+        // Show current window info
+        console.log('Window size:', window.innerWidth, 'x', window.innerHeight);
+        
+        // Try to find canvas
+        const canvas = this.findCanvasContainer();
+        if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            console.log('Found canvas:', canvas);
+            console.log('Canvas rect:', rect);
+            console.log('Canvas classes:', canvas.className);
+            console.log('Canvas id:', canvas.id);
+            
+            // Create a temporary highlight
+            const highlight = document.createElement('div');
+            highlight.style.cssText = `
+                position: fixed;
+                top: ${rect.top}px;
+                left: ${rect.left}px;
+                width: ${rect.width}px;
+                height: ${rect.height}px;
+                border: 3px solid red;
+                background: rgba(255,0,0,0.1);
+                pointer-events: none;
+                z-index: 10000;
+            `;
+            document.body.appendChild(highlight);
+            
+            setTimeout(() => highlight.remove(), 3000);
+            
+            this.showStatusMessage(`Canvas found: ${rect.width}x${rect.height} at (${rect.left}, ${rect.top})`, 'success');
+        } else {
+            console.log('No canvas found');
+            this.showStatusMessage('No canvas container detected', 'error');
+            
+            // Show all large elements for debugging
+            const elements = document.querySelectorAll('div, canvas, svg');
+            console.log('Large elements found:');
+            elements.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (rect.width > 200 && rect.height > 200) {
+                    console.log('- Element:', el.tagName, el.className, rect);
+                }
+            });
+        }
+        
+        // Force show grid for testing
+        this.showTestGrid();
+    }
+    
+    showTestGrid() {
+        // Remove any existing test grid
+        const existing = document.getElementById('test-grid-overlay');
+        if (existing) existing.remove();
+        
+        // Create a highly visible test grid
+        const testGrid = document.createElement('div');
+        testGrid.id = 'test-grid-overlay';
+        testGrid.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background-image: 
+                linear-gradient(to right, rgba(255,0,0,0.5) 2px, transparent 2px),
+                linear-gradient(to bottom, rgba(255,0,0,0.5) 2px, transparent 2px) !important;
+            background-size: 50px 50px !important;
+            pointer-events: none !important;
+            z-index: 99999 !important;
+        `;
+        
+        document.body.appendChild(testGrid);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            testGrid.remove();
+            this.showStatusMessage('Test grid removed', 'info');
+        }, 5000);
+        
+        this.showStatusMessage('Test grid shown for 5 seconds (red lines)', 'info');
+    }
+    
+    // Layer Management Panel
+    setupLayerManagement() {
+        // Refresh layers button
+        document.getElementById('refresh-layers')?.addEventListener('click', async () => {
+            await this.refreshLayerList();
+        });
+        
+        // Create blank layer
+        document.getElementById('create-blank-layer')?.addEventListener('click', async () => {
+            await this.createBlankLayer();
+        });
+        
+        // Layer actions
+        document.getElementById('group-selected')?.addEventListener('click', async () => {
+            await this.groupSelectedElements();
+        });
+        
+        document.getElementById('ungroup-selected')?.addEventListener('click', async () => {
+            await this.ungroupSelectedElements();
+        });
+        
+        document.getElementById('duplicate-layer')?.addEventListener('click', async () => {
+            await this.duplicateSelectedLayer();
+        });
+        
+        // Initial layer refresh
+        this.refreshLayerList();
+    }
+    
+    async refreshLayerList() {
+        try {
+            const layers = await this.sandboxProxy.getAllLayers();
+            this.layerList = layers;
+            this.displayLayerList(layers);
+            this.showStatusMessage(`Found ${layers.length} layers`);
+        } catch (error) {
+            console.error('Failed to refresh layers:', error);
+            this.showStatusMessage('Failed to refresh layers', 'error');
+        }
+    }
+    
+    displayLayerList(layers) {
+        const container = document.getElementById('layer-list');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        if (layers.length === 0) {
+            container.innerHTML = '<div class="layer-placeholder">No layers detected</div>';
+            return;
+        }
+        
+        layers.forEach((layer, index) => {
+            const layerItem = document.createElement('div');
+            layerItem.className = 'layer-item';
+            layerItem.dataset.layerId = layer.id;
+            
+            const icon = this.getLayerIcon(layer.type);
+            
+            layerItem.innerHTML = `
+                <div class="layer-info">
+                    <span class="layer-icon">${icon}</span>
+                    <span class="layer-name">${layer.name || `Layer ${index + 1}`}</span>
+                    <span class="layer-type">${layer.type}</span>
+                </div>
+                <div class="layer-actions">
+                    <button class="layer-visibility-btn" data-layer-id="${layer.id}">👁️</button>
+                    <button class="layer-action-btn" data-action="select" data-layer-id="${layer.id}">Select</button>
+                    <button class="layer-action-btn" data-action="delete" data-layer-id="${layer.id}">🗑️</button>
+                </div>
+            `;
+            
+            // Add event listeners
+            layerItem.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('layer-action-btn') && !e.target.classList.contains('layer-visibility-btn')) {
+                    this.selectLayer(layer.id);
+                }
+            });
+            
+            // Layer action buttons
+            const actionBtns = layerItem.querySelectorAll('.layer-action-btn');
+            actionBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+                    const layerId = btn.dataset.layerId;
+                    this.handleLayerAction(action, layerId);
+                });
+            });
+            
+            // Visibility toggle
+            const visibilityBtn = layerItem.querySelector('.layer-visibility-btn');
+            visibilityBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleLayerVisibility(layer.id);
+            });
+            
+            container.appendChild(layerItem);
+        });
+    }
+    
+    getLayerIcon(type) {
+        const icons = {
+            'Text': '📝',
+            'Rectangle': '🔲',
+            'Ellipse': '⭕',
+            'Image': '🖼️',
+            'Group': '📁',
+            'Path': '✏️',
+            'default': '📄'
+        };
+        return icons[type] || icons.default;
+    }
+    
+    selectLayer(layerId) {
+        // Update UI selection
+        document.querySelectorAll('.layer-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        
+        const layerItem = document.querySelector(`[data-layer-id="${layerId}"]`);
+        if (layerItem) {
+            layerItem.classList.add('selected');
+        }
+        
+        this.selectedLayerId = layerId;
+        this.showStatusMessage(`Layer selected: ${layerId}`);
+    }
+    
+    async handleLayerAction(action, layerId) {
+        try {
+            switch (action) {
+                case 'select':
+                    await this.sandboxProxy.selectLayerById(layerId);
+                    this.selectLayer(layerId);
+                    break;
+                case 'delete':
+                    await this.sandboxProxy.deleteLayerById(layerId);
+                    this.refreshLayerList();
+                    this.showStatusMessage('Layer deleted');
+                    break;
+            }
+        } catch (error) {
+            console.error(`Failed to ${action} layer:`, error);
+            this.showStatusMessage(`Failed to ${action} layer`, 'error');
+        }
+    }
+    
+    async toggleLayerVisibility(layerId) {
+        try {
+            const result = await this.sandboxProxy.toggleLayerVisibility(layerId);
+            if (result.success) {
+                const btn = document.querySelector(`[data-layer-id="${layerId}"] .layer-visibility-btn`);
+                if (btn) {
+                    btn.textContent = result.visible ? '👁️' : '🙈';
+                    btn.classList.toggle('hidden', !result.visible);
+                }
+                this.showStatusMessage(`Layer ${result.visible ? 'shown' : 'hidden'}`);
+            }
+        } catch (error) {
+            console.error('Failed to toggle layer visibility:', error);
+            this.showStatusMessage('Layer visibility toggle not supported', 'error');
+        }
+    }
+    
+    async createBlankLayer() {
+        try {
+            const result = await this.sandboxProxy.createBlankLayer();
+            if (result.success) {
+                this.refreshLayerList();
+                this.showStatusMessage('Blank layer created');
+            } else {
+                this.showStatusMessage('Failed to create blank layer', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to create blank layer:', error);
+            this.showStatusMessage('Blank layer creation not supported', 'error');
+        }
+    }
+    
+    async groupSelectedElements() {
+        try {
+            const result = await this.sandboxProxy.groupSelectedElements();
+            if (result.success) {
+                this.refreshLayerList();
+                this.showStatusMessage('Elements grouped successfully');
+            } else {
+                this.showStatusMessage(result.message || 'Failed to group elements', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to group elements:', error);
+            this.showStatusMessage('Grouping failed', 'error');
+        }
+    }
+    
+    async ungroupSelectedElements() {
+        try {
+            const result = await this.sandboxProxy.ungroupSelectedElements();
+            if (result.success) {
+                this.refreshLayerList();
+                this.showStatusMessage('Elements ungrouped successfully');
+            } else {
+                this.showStatusMessage(result.message || 'Failed to ungroup elements', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to ungroup elements:', error);
+            this.showStatusMessage('Ungrouping failed', 'error');
+        }
+    }
+    
+    async duplicateSelectedLayer() {
+        try {
+            const result = await this.sandboxProxy.duplicateSelectedElements();
+            if (result.success) {
+                this.refreshLayerList();
+                this.showStatusMessage('Layer duplicated successfully');
+            } else {
+                this.showStatusMessage('Failed to duplicate layer', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to duplicate layer:', error);
+            this.showStatusMessage('Layer duplication failed', 'error');
+        }
+    }
+    
+    // Smart Alignment Guides
+    setupSmartGuides() {
+        // Guide color control
+        const guideColorInput = document.getElementById('guide-color');
+        const snapToleranceInput = document.getElementById('snap-tolerance');
+        
+        guideColorInput?.addEventListener('input', (e) => {
+            this.guideColor = e.target.value;
+            this.updateGuideStyles();
+        });
+        
+        snapToleranceInput?.addEventListener('input', (e) => {
+            this.snapTolerance = parseInt(e.target.value);
+        });
+        
+        // Toggle buttons
+        document.getElementById('toggle-smart-guides')?.addEventListener('click', () => {
+            this.toggleSmartGuides();
+        });
+        
+        document.getElementById('toggle-center-guides')?.addEventListener('click', () => {
+            this.toggleCenterGuides();
+        });
+        
+        document.getElementById('toggle-margin-guides')?.addEventListener('click', () => {
+            this.toggleMarginGuides();
+        });
+        
+        // Quick alignment actions
+        document.getElementById('align-to-canvas-center')?.addEventListener('click', async () => {
+            await this.alignToCanvasCenter();
+        });
+        
+        document.getElementById('distribute-evenly')?.addEventListener('click', async () => {
+            await this.distributeEvenly();
+        });
+        
+        document.getElementById('align-to-margins')?.addEventListener('click', async () => {
+            await this.alignToMargins();
+        });
+    }
+    
+    toggleSmartGuides() {
+        this.smartGuidesEnabled = !this.smartGuidesEnabled;
+        const btn = document.getElementById('toggle-smart-guides');
+        
+        if (this.smartGuidesEnabled) {
+            btn.classList.add('active');
+            btn.textContent = '✨ Hide Smart Guides';
+            this.enableSmartGuides();
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = '✨ Smart Guides';
+            this.disableSmartGuides();
+        }
+        
+        this.showStatusMessage(`Smart Guides ${this.smartGuidesEnabled ? 'enabled' : 'disabled'}`);
+    }
+    
+    toggleCenterGuides() {
+        this.centerGuidesEnabled = !this.centerGuidesEnabled;
+        const btn = document.getElementById('toggle-center-guides');
+        
+        if (this.centerGuidesEnabled) {
+            btn.classList.add('active');
+            btn.textContent = '🎯 Hide Center Guides';
+            this.showCenterGuides();
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = '🎯 Center Guides';
+            this.hideCenterGuides();
+        }
+        
+        this.showStatusMessage(`Center Guides ${this.centerGuidesEnabled ? 'enabled' : 'disabled'}`);
+    }
+    
+    toggleMarginGuides() {
+        this.marginGuidesEnabled = !this.marginGuidesEnabled;
+        const btn = document.getElementById('toggle-margin-guides');
+        
+        if (this.marginGuidesEnabled) {
+            btn.classList.add('active');
+            btn.textContent = '📏 Hide Margin Guides';
+            this.showMarginGuides();
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = '📏 Margin Guides';
+            this.hideMarginGuides();
+        }
+        
+        this.showStatusMessage(`Margin Guides ${this.marginGuidesEnabled ? 'enabled' : 'disabled'}`);
+    }
+    
+    enableSmartGuides() {
+        // Create guide overlay container
+        if (!document.getElementById('guide-overlay')) {
+            const guideOverlay = document.createElement('div');
+            guideOverlay.id = 'guide-overlay';
+            guideOverlay.className = 'guide-overlay';
+            document.body.appendChild(guideOverlay);
+        }
+    }
+    
+    disableSmartGuides() {
+        const guideOverlay = document.getElementById('guide-overlay');
+        if (guideOverlay) {
+            guideOverlay.remove();
+        }
+    }
+    
+    showCenterGuides() {
+        this.enableSmartGuides();
+        const overlay = document.getElementById('guide-overlay');
+        if (!overlay) return;
+        
+        // Remove existing center guides
+        overlay.querySelectorAll('.guide-line.center').forEach(guide => guide.remove());
+        
+        // Add center guides
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        
+        // Vertical center line
+        const vCenterLine = document.createElement('div');
+        vCenterLine.className = 'guide-line vertical center';
+        vCenterLine.style.left = centerX + 'px';
+        vCenterLine.style.background = this.guideColor;
+        overlay.appendChild(vCenterLine);
+        
+        // Horizontal center line
+        const hCenterLine = document.createElement('div');
+        hCenterLine.className = 'guide-line horizontal center';
+        hCenterLine.style.top = centerY + 'px';
+        hCenterLine.style.background = this.guideColor;
+        overlay.appendChild(hCenterLine);
+    }
+    
+    hideCenterGuides() {
+        const overlay = document.getElementById('guide-overlay');
+        if (overlay) {
+            overlay.querySelectorAll('.guide-line.center').forEach(guide => guide.remove());
+        }
+    }
+    
+    showMarginGuides() {
+        this.enableSmartGuides();
+        const overlay = document.getElementById('guide-overlay');
+        if (!overlay) return;
+        
+        // Remove existing margin guides
+        overlay.querySelectorAll('.guide-line.margin').forEach(guide => guide.remove());
+        
+        const margin = 50; // 50px margin
+        
+        // Top margin
+        const topMargin = document.createElement('div');
+        topMargin.className = 'guide-line horizontal margin';
+        topMargin.style.top = margin + 'px';
+        overlay.appendChild(topMargin);
+        
+        // Bottom margin
+        const bottomMargin = document.createElement('div');
+        bottomMargin.className = 'guide-line horizontal margin';
+        bottomMargin.style.top = (window.innerHeight - margin) + 'px';
+        overlay.appendChild(bottomMargin);
+        
+        // Left margin
+        const leftMargin = document.createElement('div');
+        leftMargin.className = 'guide-line vertical margin';
+        leftMargin.style.left = margin + 'px';
+        overlay.appendChild(leftMargin);
+        
+        // Right margin
+        const rightMargin = document.createElement('div');
+        rightMargin.className = 'guide-line vertical margin';
+        rightMargin.style.left = (window.innerWidth - margin) + 'px';
+        overlay.appendChild(rightMargin);
+    }
+    
+    hideMarginGuides() {
+        const overlay = document.getElementById('guide-overlay');
+        if (overlay) {
+            overlay.querySelectorAll('.guide-line.margin').forEach(guide => guide.remove());
+        }
+    }
+    
+    updateGuideStyles() {
+        const guides = document.querySelectorAll('.guide-line:not(.center):not(.margin)');
+        guides.forEach(guide => {
+            guide.style.background = this.guideColor;
+        });
+    }
+    
+    async alignToCanvasCenter() {
+        try {
+            const result = await this.sandboxProxy.alignToCanvasCenter();
+            if (result.success) {
+                this.showStatusMessage('Elements aligned to canvas center');
+            } else {
+                this.showStatusMessage(result.message || 'Failed to align to center', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to align to center:', error);
+            this.showStatusMessage('Center alignment failed', 'error');
+        }
+    }
+    
+    async distributeEvenly() {
+        try {
+            const result = await this.sandboxProxy.distributeElementsEvenly();
+            if (result.success) {
+                this.showStatusMessage('Elements distributed evenly');
+            } else {
+                this.showStatusMessage(result.message || 'Failed to distribute evenly', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to distribute evenly:', error);
+            this.showStatusMessage('Even distribution failed', 'error');
+        }
+    }
+    
+    async alignToMargins() {
+        try {
+            const result = await this.sandboxProxy.alignToMargins();
+            if (result.success) {
+                this.showStatusMessage('Elements aligned to margins');
+            } else {
+                this.showStatusMessage(result.message || 'Failed to align to margins', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to align to margins:', error);
+            this.showStatusMessage('Margin alignment failed', 'error');
+        }
     }
 }
 
