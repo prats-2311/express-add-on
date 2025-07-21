@@ -2222,7 +2222,8 @@ class PrecisionToolkit {
         // Test Layer Management APIs
         const layerMethods = [
             'getAllLayers',
-            'selectLayerById', 
+            'selectLayerById',
+            'selectElementById', // NEW method to bypass cache
             'deleteLayerById',
             'toggleLayerVisibility',
             'createBlankLayer',
@@ -2264,6 +2265,22 @@ class PrecisionToolkit {
         } catch (error) {
             console.error('Version check failed:', error);
             results.push(`Backend Version: ❌ Error - ${error.message}`);
+        }
+
+        // Test debug methods
+        try {
+            console.log('Testing debugAvailableMethods...');
+            if (this.sandboxProxy.debugAvailableMethods) {
+                const debug = await this.sandboxProxy.debugAvailableMethods();
+                console.log('debugAvailableMethods result:', debug);
+                results.push(`Available Methods: ✅ ${debug.count} methods found`);
+                results.push(`Methods: ${debug.methods.join(', ')}`);
+            } else {
+                results.push('Debug Methods: ❌ Method not available');
+            }
+        } catch (error) {
+            console.error('debugAvailableMethods test failed:', error);
+            results.push(`Debug Methods: ❌ Error - ${error.message}`);
         }
 
         // Test canvas bounds detection
@@ -2430,9 +2447,9 @@ class PrecisionToolkit {
             `;
             
             // Add event listeners
-            layerItem.addEventListener('click', (e) => {
+            layerItem.addEventListener('click', async (e) => {
                 if (!e.target.classList.contains('layer-action-btn') && !e.target.classList.contains('layer-visibility-btn')) {
-                    this.selectLayer(layer.id);
+                    await this.selectLayer(layer.id, e.ctrlKey || e.metaKey);
                 }
             });
             
@@ -2471,34 +2488,64 @@ class PrecisionToolkit {
         return icons[type] || icons.default;
     }
     
-    selectLayer(layerId) {
-        // Update UI selection
-        document.querySelectorAll('.layer-item').forEach(item => {
-            item.classList.remove('selected');
-        });
-        
-        const layerItem = document.querySelector(`[data-layer-id="${layerId}"]`);
-        if (layerItem) {
-            layerItem.classList.add('selected');
+    async selectLayer(layerId, multiSelect = false) {
+        try {
+            // Adobe Express Document API does not support programmatic selection
+            // We provide visual feedback and user guidance instead
+            const selectMethod = this.sandboxProxy.selectElementById || this.sandboxProxy.selectLayerById;
+            
+            if (selectMethod) {
+                console.log('Finding layer:', layerId, 'multiSelect:', multiSelect);
+                const selectResult = await selectMethod(layerId, multiSelect);
+                console.log('Find result:', selectResult);
+                
+                if (selectResult && selectResult.success) {
+                    // Update UI selection for visual feedback only
+                    if (!multiSelect) {
+                        // Single selection - clear all other selections
+                        document.querySelectorAll('.layer-item').forEach(item => {
+                            item.classList.remove('selected');
+                        });
+                        this.selectedLayerId = layerId;
+                    } else {
+                        // Multi-selection - toggle this layer's selection
+                        const layerItem = document.querySelector(`[data-layer-id="${layerId}"]`);
+                        if (layerItem && layerItem.classList.contains('selected')) {
+                            // Deselect if already selected
+                            layerItem.classList.remove('selected');
+                            if (this.selectedLayerId === layerId) {
+                                this.selectedLayerId = null;
+                            }
+                        } else {
+                            // Add to selection
+                            this.selectedLayerId = layerId; // Keep track of last selected
+                        }
+                    }
+                    
+                    const layerItem = document.querySelector(`[data-layer-id="${layerId}"]`);
+                    if (layerItem && (!multiSelect || !layerItem.classList.contains('selected'))) {
+                        layerItem.classList.add('selected');
+                    }
+                    
+                    const selectedCount = document.querySelectorAll('.layer-item.selected').length;
+                    this.showStatusMessage(`${selectedCount} layer${selectedCount !== 1 ? 's' : ''} selected`);
+                } else {
+                    this.showStatusMessage('Failed to select layer', 'error');
+                }
+            } else {
+                this.showStatusMessage('Layer selection not available - please reload add-on', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to select layer:', error);
+            this.showStatusMessage('Failed to select layer: ' + error.message, 'error');
         }
-        
-        this.selectedLayerId = layerId;
-        this.showStatusMessage(`Layer selected: ${layerId}`);
     }
     
     async handleLayerAction(action, layerId) {
         try {
             switch (action) {
                 case 'select':
-                    if (!this.sandboxProxy.selectLayerById) {
-                        this.showStatusMessage('Layer selection not available - please reload add-on', 'error');
-                        return;
-                    }
-                    console.log('Selecting layer:', layerId);
-                    const selectResult = await this.sandboxProxy.selectLayerById(layerId);
-                    console.log('Select result:', selectResult);
-                    this.selectLayer(layerId);
-                    this.showStatusMessage('Layer selected');
+                    await this.selectLayer(layerId);
                     break;
                 case 'delete':
                     if (!this.sandboxProxy.deleteLayerById) {

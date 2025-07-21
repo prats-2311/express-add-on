@@ -1307,25 +1307,46 @@ function start() {
             }
         },
 
-        selectLayerById: (layerId) => {
+        // IMPORTANT: Adobe Express Document API does NOT support programmatic selection
+        // This method provides UI-only feedback and instructions to the user
+        selectElementById: (layerId, multiSelect = false) => {
             try {
+                console.log('selectElementById called with:', layerId, multiSelect);
                 const insertionParent = editor.context.insertionParent;
                 const elements = Array.from(insertionParent.children);
                 const element = elements.find(el => el.id === layerId);
                 
                 if (element) {
-                    // Clear current selection
-                    editor.context.selection.clear();
-                    // Add element to selection
-                    editor.context.selection.add(element);
-                    return { success: true };
+                    console.log('Element found:', element.id, 'Type:', element.constructor.name);
+                    
+                    // Adobe Express Document API does not support programmatic selection
+                    // We can only provide visual feedback in the add-on UI
+                    return { 
+                        success: true, 
+                        selectionCount: 1,
+                        message: `Layer found: ${element.constructor.name}. Please manually select it in Adobe Express canvas.`,
+                        elementInfo: {
+                            id: element.id,
+                            type: element.constructor.name,
+                            x: element.translation?.x || 0,
+                            y: element.translation?.y || 0,
+                            width: element.width || 0,
+                            height: element.height || 0
+                        }
+                    };
                 }
                 
-                return { success: false, message: 'Layer not found' };
+                console.log('Element not found:', layerId);
+                return { success: false, message: 'Layer not found in document' };
             } catch (error) {
-                console.error('Failed to select layer:', error);
+                console.error('Failed to find layer:', error);
                 return { success: false, message: error.message };
             }
+        },
+
+        // Keep old method for backward compatibility but make it call the new one
+        selectLayerById: (layerId, multiSelect = false) => {
+            return sandboxApi.selectElementById(layerId, multiSelect);
         },
 
         deleteLayerById: (layerId) => {
@@ -1612,14 +1633,25 @@ function start() {
         // Version check method to verify backend is updated
         getPhase1Version: () => {
             return { 
-                version: '1.0.0', 
+                version: '1.6.0-no-programmatic-selection', 
                 timestamp: Date.now(),
-                message: 'Phase 1 backend methods loaded successfully',
+                message: 'Adobe Express Document API does NOT support programmatic selection - UI feedback only',
                 methods: [
-                    'getAllLayers', 'selectLayerById', 'deleteLayerById', 
+                    'getAllLayers', 'selectLayerById', 'selectElementById', 'deleteLayerById', 
                     'toggleLayerVisibility', 'createBlankLayer', 'duplicateSelectedElements',
                     'alignToCanvasCenter', 'distributeElementsEvenly', 'alignToMargins'
                 ]
+            };
+        },
+
+        // Debug method to list all available methods
+        debugAvailableMethods: () => {
+            const methods = Object.keys(sandboxApi).filter(key => typeof sandboxApi[key] === 'function');
+            console.log('Available sandbox methods:', methods);
+            return {
+                success: true,
+                methods: methods,
+                count: methods.length
             };
         },
 
