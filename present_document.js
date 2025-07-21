@@ -1281,6 +1281,538 @@ function start() {
                 console.error('Failed to clear elements:', error);
                 return { success: false, message: error.message };
             }
+        },
+
+        // ==================== PHASE 1 FEATURES ====================
+        
+        // Layer Management
+        getAllLayers: () => {
+            try {
+                const insertionParent = editor.context.insertionParent;
+                const elements = Array.from(insertionParent.children);
+                
+                return elements.map((element, index) => ({
+                    id: element.id,
+                    name: element.name || `Layer ${index + 1}`,
+                    type: element.constructor.name,
+                    visible: true, // Adobe Express doesn't have visibility API yet
+                    x: element.translation?.x || 0,
+                    y: element.translation?.y || 0,
+                    width: element.width || 0,
+                    height: element.height || 0
+                }));
+            } catch (error) {
+                console.error('Failed to get layers:', error);
+                return [];
+            }
+        },
+
+        // IMPORTANT: Adobe Express Document API does NOT support programmatic selection
+        // This method provides UI-only feedback and instructions to the user
+        selectElementById: (layerId, multiSelect = false) => {
+            try {
+                console.log('selectElementById called with:', layerId, multiSelect);
+                const insertionParent = editor.context.insertionParent;
+                const elements = Array.from(insertionParent.children);
+                const element = elements.find(el => el.id === layerId);
+                
+                if (element) {
+                    console.log('Element found:', element.id, 'Type:', element.constructor.name);
+                    
+                    // Adobe Express Document API does not support programmatic selection
+                    // We can only provide visual feedback in the add-on UI
+                    return { 
+                        success: true, 
+                        selectionCount: 1,
+                        message: `Layer found: ${element.constructor.name}. Please manually select it in Adobe Express canvas.`,
+                        elementInfo: {
+                            id: element.id,
+                            type: element.constructor.name,
+                            x: element.translation?.x || 0,
+                            y: element.translation?.y || 0,
+                            width: element.width || 0,
+                            height: element.height || 0
+                        }
+                    };
+                }
+                
+                console.log('Element not found:', layerId);
+                return { success: false, message: 'Layer not found in document' };
+            } catch (error) {
+                console.error('Failed to find layer:', error);
+                return { success: false, message: error.message };
+            }
+        },
+
+        // Keep old method for backward compatibility but make it call the new one
+        selectLayerById: (layerId, multiSelect = false) => {
+            return sandboxApi.selectElementById(layerId, multiSelect);
+        },
+
+        deleteLayerById: (layerId) => {
+            try {
+                const insertionParent = editor.context.insertionParent;
+                const elements = Array.from(insertionParent.children);
+                const element = elements.find(el => el.id === layerId);
+                
+                if (element) {
+                    insertionParent.children.remove(element);
+                    return { success: true };
+                }
+                
+                return { success: false, message: 'Layer not found' };
+            } catch (error) {
+                console.error('Failed to delete layer:', error);
+                return { success: false, message: error.message };
+            }
+        },
+
+        toggleLayerVisibility: (layerId) => {
+            // Adobe Express doesn't have layer visibility API yet
+            // This is a placeholder for future implementation
+            return { 
+                success: false, 
+                message: 'Layer visibility control not available in Adobe Express API',
+                visible: true 
+            };
+        },
+
+        createBlankLayer: () => {
+            try {
+                // Create a transparent rectangle as a "blank layer"
+                const rectangle = editor.createRectangle();
+                rectangle.width = 100;
+                rectangle.height = 100;
+                rectangle.translation = { x: 50, y: 50 };
+                
+                // Make it transparent
+                const transparentColor = { red: 0, green: 0, blue: 0, alpha: 0.1 };
+                rectangle.fill = editor.makeColorFill(transparentColor);
+                
+                editor.context.insertionParent.children.append(rectangle);
+                
+                return { 
+                    success: true, 
+                    layerId: rectangle.id,
+                    message: 'Blank layer created as transparent rectangle'
+                };
+            } catch (error) {
+                console.error('Failed to create blank layer:', error);
+                return { success: false, message: error.message };
+            }
+        },
+
+        groupSelectedElements: () => {
+            try {
+                const selection = Array.from(editor.context.selection);
+                
+                if (selection.length < 2) {
+                    return { success: false, message: 'Select at least 2 elements to group' };
+                }
+
+                // Adobe Express doesn't have native grouping API yet
+                // This is a placeholder for future implementation
+                return { 
+                    success: false, 
+                    message: 'Element grouping not available in Adobe Express API yet'
+                };
+            } catch (error) {
+                console.error('Failed to group elements:', error);
+                return { success: false, message: error.message };
+            }
+        },
+
+        ungroupSelectedElements: () => {
+            try {
+                const selection = Array.from(editor.context.selection);
+                
+                if (selection.length === 0) {
+                    return { success: false, message: 'No elements selected' };
+                }
+
+                // Adobe Express doesn't have native ungrouping API yet
+                // This is a placeholder for future implementation
+                return { 
+                    success: false, 
+                    message: 'Element ungrouping not available in Adobe Express API yet'
+                };
+            } catch (error) {
+                console.error('Failed to ungroup elements:', error);
+                return { success: false, message: error.message };
+            }
+        },
+
+        duplicateSelectedElements: () => {
+            try {
+                const selection = Array.from(editor.context.selection);
+                
+                if (selection.length === 0) {
+                    return { success: false, message: 'No elements selected' };
+                }
+
+                let duplicatedCount = 0;
+                const insertionParent = editor.context.insertionParent;
+
+                selection.forEach(element => {
+                    try {
+                        let duplicate;
+                        
+                        // Create duplicate based on element type
+                        if (element.text !== undefined) {
+                            // Text element
+                            duplicate = editor.createText();
+                            duplicate.text = element.text;
+                            if (element.fontSize) duplicate.fontSize = element.fontSize;
+                            if (element.fill) duplicate.fill = element.fill;
+                        } else if (element.constructor.name === 'Rectangle') {
+                            // Rectangle
+                            duplicate = editor.createRectangle();
+                            duplicate.width = element.width;
+                            duplicate.height = element.height;
+                            if (element.fill) duplicate.fill = element.fill;
+                        } else if (element.constructor.name === 'Ellipse') {
+                            // Ellipse
+                            duplicate = editor.createEllipse();
+                            duplicate.width = element.width;
+                            duplicate.height = element.height;
+                            if (element.fill) duplicate.fill = element.fill;
+                        } else {
+                            // Generic element - try to copy basic properties
+                            console.log('Unsupported element type for duplication:', element.constructor.name);
+                            return;
+                        }
+
+                        // Position the duplicate slightly offset
+                        duplicate.translation = {
+                            x: element.translation.x + 20,
+                            y: element.translation.y + 20
+                        };
+
+                        insertionParent.children.append(duplicate);
+                        duplicatedCount++;
+                    } catch (error) {
+                        console.error('Failed to duplicate element:', error);
+                    }
+                });
+
+                return { 
+                    success: duplicatedCount > 0, 
+                    message: `Duplicated ${duplicatedCount} elements`,
+                    duplicatedCount 
+                };
+            } catch (error) {
+                console.error('Failed to duplicate elements:', error);
+                return { success: false, message: error.message };
+            }
+        },
+
+        // Smart Alignment Guides
+        alignToCanvasCenter: () => {
+            try {
+                const selection = Array.from(editor.context.selection);
+                
+                if (selection.length === 0) {
+                    return { success: false, message: 'No elements selected' };
+                }
+
+                // Get canvas dimensions (approximate)
+                const canvasWidth = 1080; // Standard Adobe Express canvas
+                const canvasHeight = 1080;
+                const centerX = canvasWidth / 2;
+                const centerY = canvasHeight / 2;
+
+                let alignedCount = 0;
+
+                selection.forEach(element => {
+                    try {
+                        const elementCenterX = element.width ? element.width / 2 : 0;
+                        const elementCenterY = element.height ? element.height / 2 : 0;
+
+                        element.translation = {
+                            x: centerX - elementCenterX,
+                            y: centerY - elementCenterY
+                        };
+                        alignedCount++;
+                    } catch (error) {
+                        console.error('Failed to center element:', error);
+                    }
+                });
+
+                return { 
+                    success: alignedCount > 0, 
+                    message: `Centered ${alignedCount} elements to canvas`,
+                    alignedCount 
+                };
+            } catch (error) {
+                console.error('Failed to align to canvas center:', error);
+                return { success: false, message: error.message };
+            }
+        },
+
+        distributeElementsEvenly: () => {
+            try {
+                const selection = Array.from(editor.context.selection);
+                
+                if (selection.length < 3) {
+                    return { success: false, message: 'Select at least 3 elements to distribute evenly' };
+                }
+
+                // Sort elements by X position
+                const sortedElements = selection.sort((a, b) => a.translation.x - b.translation.x);
+                
+                const firstElement = sortedElements[0];
+                const lastElement = sortedElements[sortedElements.length - 1];
+                
+                const totalDistance = lastElement.translation.x - firstElement.translation.x;
+                const spacing = totalDistance / (sortedElements.length - 1);
+
+                let distributedCount = 0;
+
+                sortedElements.forEach((element, index) => {
+                    if (index > 0 && index < sortedElements.length - 1) {
+                        try {
+                            element.translation = {
+                                x: firstElement.translation.x + (spacing * index),
+                                y: element.translation.y // Keep original Y position
+                            };
+                            distributedCount++;
+                        } catch (error) {
+                            console.error('Failed to distribute element:', error);
+                        }
+                    }
+                });
+
+                return { 
+                    success: distributedCount > 0, 
+                    message: `Distributed ${distributedCount + 2} elements evenly`,
+                    distributedCount: distributedCount + 2 
+                };
+            } catch (error) {
+                console.error('Failed to distribute elements evenly:', error);
+                return { success: false, message: error.message };
+            }
+        },
+
+        alignToMargins: () => {
+            try {
+                const selection = Array.from(editor.context.selection);
+                
+                if (selection.length === 0) {
+                    return { success: false, message: 'No elements selected' };
+                }
+
+                const margin = 50; // 50px margin from edges
+                let alignedCount = 0;
+
+                selection.forEach((element, index) => {
+                    try {
+                        // Align first element to left margin, others distributed
+                        const x = margin + (index * 100); // 100px spacing between elements
+                        
+                        element.translation = {
+                            x: x,
+                            y: margin // Align to top margin
+                        };
+                        alignedCount++;
+                    } catch (error) {
+                        console.error('Failed to align element to margins:', error);
+                    }
+                });
+
+                return { 
+                    success: alignedCount > 0, 
+                    message: `Aligned ${alignedCount} elements to margins`,
+                    alignedCount 
+                };
+            } catch (error) {
+                console.error('Failed to align to margins:', error);
+                return { success: false, message: error.message };
+            }
+        },
+
+        // Version check method to verify backend is updated
+        getPhase1Version: () => {
+            return { 
+                version: '1.6.0-no-programmatic-selection', 
+                timestamp: Date.now(),
+                message: 'Adobe Express Document API does NOT support programmatic selection - UI feedback only',
+                methods: [
+                    'getAllLayers', 'selectLayerById', 'selectElementById', 'deleteLayerById', 
+                    'toggleLayerVisibility', 'createBlankLayer', 'duplicateSelectedElements',
+                    'alignToCanvasCenter', 'distributeElementsEvenly', 'alignToMargins'
+                ]
+            };
+        },
+
+        // Debug method to list all available methods
+        debugAvailableMethods: () => {
+            const methods = Object.keys(sandboxApi).filter(key => typeof sandboxApi[key] === 'function');
+            console.log('Available sandbox methods:', methods);
+            return {
+                success: true,
+                methods: methods,
+                count: methods.length
+            };
+        },
+
+        // Helper method to get canvas bounds
+        getCanvasBounds: () => {
+            try {
+                // Create a generous grid that covers most common canvas sizes
+                // Adobe Express supports various sizes: 1080x1080, 1920x1080, 1080x1920, etc.
+                let canvasWidth = 2000;   // Large enough for most designs
+                let canvasHeight = 2000;  // Large enough for most designs
+                
+                console.log('Using generous canvas dimensions for grid:', canvasWidth, 'x', canvasHeight);
+                return { width: canvasWidth, height: canvasHeight };
+                
+            } catch (error) {
+                console.error('Error getting canvas bounds:', error);
+                return { width: 2000, height: 2000 };
+            }
+        },
+
+        // Grid Overlay System for Phase 1 Features
+        createGridOverlay: async (gridSize, gridOpacity) => {
+            try {
+                console.log('Creating grid overlay on canvas with size:', gridSize, 'opacity:', gridOpacity);
+                
+                // Create a grid pattern using thin rectangles on the actual canvas
+                const gridElements = [];
+                
+                // Get canvas dimensions using our helper method
+                const canvasBounds = sandboxApi.getCanvasBounds();
+                const canvasWidth = canvasBounds.width;
+                const canvasHeight = canvasBounds.height;
+                
+                console.log('Using canvas dimensions for grid:', canvasWidth, 'x', canvasHeight);
+                
+                // Create vertical grid lines using thin rectangles
+                for (let x = 0; x <= canvasWidth; x += gridSize) {
+                    const verticalLine = editor.createRectangle();
+                    verticalLine.width = 1;
+                    verticalLine.height = canvasHeight;
+                    verticalLine.translation = { x: x, y: 0 };
+                    
+                    // Set line color
+                    const gridColor = { red: 0, green: 0.4, blue: 0.8, alpha: Math.max(0.2, gridOpacity) };
+                    verticalLine.fill = editor.makeColorFill(gridColor);
+                    
+                    editor.context.insertionParent.children.append(verticalLine);
+                    gridElements.push(verticalLine.id);
+                }
+                
+                // Create horizontal grid lines using thin rectangles
+                for (let y = 0; y <= canvasHeight; y += gridSize) {
+                    const horizontalLine = editor.createRectangle();
+                    horizontalLine.width = canvasWidth;
+                    horizontalLine.height = 1;
+                    horizontalLine.translation = { x: 0, y: y };
+                    
+                    // Set line color
+                    const gridColor = { red: 0, green: 0.4, blue: 0.8, alpha: Math.max(0.2, gridOpacity) };
+                    horizontalLine.fill = editor.makeColorFill(gridColor);
+                    
+                    editor.context.insertionParent.children.append(horizontalLine);
+                    gridElements.push(horizontalLine.id);
+                }
+                
+                console.log('Grid overlay created successfully with', gridElements.length, 'lines');
+                
+                return {
+                    success: true,
+                    gridElementIds: gridElements,
+                    message: `Grid overlay created with ${gridElements.length} lines`
+                };
+                
+            } catch (error) {
+                console.error('Failed to create grid overlay:', error);
+                
+                // Fallback: Create a simpler grid with fewer lines
+                try {
+                    const gridElements = [];
+                    // Use the same canvas dimensions as determined above
+                    const canvasBounds = sandboxApi.getCanvasBounds();
+                    const canvasWidth = canvasBounds.width;
+                    const canvasHeight = canvasBounds.height;
+                    
+                    // Create fewer grid lines for better performance
+                    for (let x = 0; x <= canvasWidth; x += gridSize * 2) {
+                        const verticalLine = editor.createRectangle();
+                        verticalLine.width = 1;
+                        verticalLine.height = canvasHeight;
+                        verticalLine.translation = { x: x, y: 0 };
+                        
+                        const gridColor = { red: 0, green: 0.4, blue: 0.8, alpha: Math.max(0.3, gridOpacity) };
+                        verticalLine.fill = editor.makeColorFill(gridColor);
+                        
+                        editor.context.insertionParent.children.append(verticalLine);
+                        gridElements.push(verticalLine.id);
+                    }
+                    
+                    for (let y = 0; y <= canvasHeight; y += gridSize * 2) {
+                        const horizontalLine = editor.createRectangle();
+                        horizontalLine.width = canvasWidth;
+                        horizontalLine.height = 1;
+                        horizontalLine.translation = { x: 0, y: y };
+                        
+                        const gridColor = { red: 0, green: 0.4, blue: 0.8, alpha: Math.max(0.3, gridOpacity) };
+                        horizontalLine.fill = editor.makeColorFill(gridColor);
+                        
+                        editor.context.insertionParent.children.append(horizontalLine);
+                        gridElements.push(horizontalLine.id);
+                    }
+                    
+                    console.log('Fallback grid created with', gridElements.length, 'rectangle lines');
+                    
+                    return {
+                        success: true,
+                        gridElementIds: gridElements,
+                        message: `Fallback grid created with ${gridElements.length} lines`
+                    };
+                    
+                } catch (fallbackError) {
+                    console.error('Fallback grid creation also failed:', fallbackError);
+                    return {
+                        success: false,
+                        message: 'Failed to create grid overlay: ' + error.message
+                    };
+                }
+            }
+        },
+
+        removeGridOverlay: async (gridElementIds) => {
+            try {
+                if (!gridElementIds || gridElementIds.length === 0) {
+                    return { success: true, message: 'No grid elements to remove' };
+                }
+                
+                const elements = Array.from(editor.context.insertionParent.children);
+                let removedCount = 0;
+                
+                for (const elementId of gridElementIds) {
+                    const element = elements.find(el => el.id === elementId);
+                    if (element) {
+                        element.removeFromParent();
+                        removedCount++;
+                    }
+                }
+                
+                console.log('Removed', removedCount, 'grid elements');
+                
+                return {
+                    success: true,
+                    removedCount: removedCount,
+                    message: `Removed ${removedCount} grid elements`
+                };
+                
+            } catch (error) {
+                console.error('Failed to remove grid overlay:', error);
+                return {
+                    success: false,
+                    message: 'Failed to remove grid overlay: ' + error.message
+                };
+            }
         }
     };
 
