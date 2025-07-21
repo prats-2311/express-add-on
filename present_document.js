@@ -1607,6 +1607,180 @@ function start() {
                 console.error('Failed to align to margins:', error);
                 return { success: false, message: error.message };
             }
+        },
+
+        // Version check method to verify backend is updated
+        getPhase1Version: () => {
+            return { 
+                version: '1.0.0', 
+                timestamp: Date.now(),
+                message: 'Phase 1 backend methods loaded successfully',
+                methods: [
+                    'getAllLayers', 'selectLayerById', 'deleteLayerById', 
+                    'toggleLayerVisibility', 'createBlankLayer', 'duplicateSelectedElements',
+                    'alignToCanvasCenter', 'distributeElementsEvenly', 'alignToMargins'
+                ]
+            };
+        },
+
+        // Helper method to get canvas bounds
+        getCanvasBounds: () => {
+            try {
+                // Create a generous grid that covers most common canvas sizes
+                // Adobe Express supports various sizes: 1080x1080, 1920x1080, 1080x1920, etc.
+                let canvasWidth = 2000;   // Large enough for most designs
+                let canvasHeight = 2000;  // Large enough for most designs
+                
+                console.log('Using generous canvas dimensions for grid:', canvasWidth, 'x', canvasHeight);
+                return { width: canvasWidth, height: canvasHeight };
+                
+            } catch (error) {
+                console.error('Error getting canvas bounds:', error);
+                return { width: 2000, height: 2000 };
+            }
+        },
+
+        // Grid Overlay System for Phase 1 Features
+        createGridOverlay: async (gridSize, gridOpacity) => {
+            try {
+                console.log('Creating grid overlay on canvas with size:', gridSize, 'opacity:', gridOpacity);
+                
+                // Create a grid pattern using thin rectangles on the actual canvas
+                const gridElements = [];
+                
+                // Get canvas dimensions using our helper method
+                const canvasBounds = sandboxApi.getCanvasBounds();
+                const canvasWidth = canvasBounds.width;
+                const canvasHeight = canvasBounds.height;
+                
+                console.log('Using canvas dimensions for grid:', canvasWidth, 'x', canvasHeight);
+                
+                // Create vertical grid lines using thin rectangles
+                for (let x = 0; x <= canvasWidth; x += gridSize) {
+                    const verticalLine = editor.createRectangle();
+                    verticalLine.width = 1;
+                    verticalLine.height = canvasHeight;
+                    verticalLine.translation = { x: x, y: 0 };
+                    
+                    // Set line color
+                    const gridColor = { red: 0, green: 0.4, blue: 0.8, alpha: Math.max(0.2, gridOpacity) };
+                    verticalLine.fill = editor.makeColorFill(gridColor);
+                    
+                    editor.context.insertionParent.children.append(verticalLine);
+                    gridElements.push(verticalLine.id);
+                }
+                
+                // Create horizontal grid lines using thin rectangles
+                for (let y = 0; y <= canvasHeight; y += gridSize) {
+                    const horizontalLine = editor.createRectangle();
+                    horizontalLine.width = canvasWidth;
+                    horizontalLine.height = 1;
+                    horizontalLine.translation = { x: 0, y: y };
+                    
+                    // Set line color
+                    const gridColor = { red: 0, green: 0.4, blue: 0.8, alpha: Math.max(0.2, gridOpacity) };
+                    horizontalLine.fill = editor.makeColorFill(gridColor);
+                    
+                    editor.context.insertionParent.children.append(horizontalLine);
+                    gridElements.push(horizontalLine.id);
+                }
+                
+                console.log('Grid overlay created successfully with', gridElements.length, 'lines');
+                
+                return {
+                    success: true,
+                    gridElementIds: gridElements,
+                    message: `Grid overlay created with ${gridElements.length} lines`
+                };
+                
+            } catch (error) {
+                console.error('Failed to create grid overlay:', error);
+                
+                // Fallback: Create a simpler grid with fewer lines
+                try {
+                    const gridElements = [];
+                    // Use the same canvas dimensions as determined above
+                    const canvasBounds = sandboxApi.getCanvasBounds();
+                    const canvasWidth = canvasBounds.width;
+                    const canvasHeight = canvasBounds.height;
+                    
+                    // Create fewer grid lines for better performance
+                    for (let x = 0; x <= canvasWidth; x += gridSize * 2) {
+                        const verticalLine = editor.createRectangle();
+                        verticalLine.width = 1;
+                        verticalLine.height = canvasHeight;
+                        verticalLine.translation = { x: x, y: 0 };
+                        
+                        const gridColor = { red: 0, green: 0.4, blue: 0.8, alpha: Math.max(0.3, gridOpacity) };
+                        verticalLine.fill = editor.makeColorFill(gridColor);
+                        
+                        editor.context.insertionParent.children.append(verticalLine);
+                        gridElements.push(verticalLine.id);
+                    }
+                    
+                    for (let y = 0; y <= canvasHeight; y += gridSize * 2) {
+                        const horizontalLine = editor.createRectangle();
+                        horizontalLine.width = canvasWidth;
+                        horizontalLine.height = 1;
+                        horizontalLine.translation = { x: 0, y: y };
+                        
+                        const gridColor = { red: 0, green: 0.4, blue: 0.8, alpha: Math.max(0.3, gridOpacity) };
+                        horizontalLine.fill = editor.makeColorFill(gridColor);
+                        
+                        editor.context.insertionParent.children.append(horizontalLine);
+                        gridElements.push(horizontalLine.id);
+                    }
+                    
+                    console.log('Fallback grid created with', gridElements.length, 'rectangle lines');
+                    
+                    return {
+                        success: true,
+                        gridElementIds: gridElements,
+                        message: `Fallback grid created with ${gridElements.length} lines`
+                    };
+                    
+                } catch (fallbackError) {
+                    console.error('Fallback grid creation also failed:', fallbackError);
+                    return {
+                        success: false,
+                        message: 'Failed to create grid overlay: ' + error.message
+                    };
+                }
+            }
+        },
+
+        removeGridOverlay: async (gridElementIds) => {
+            try {
+                if (!gridElementIds || gridElementIds.length === 0) {
+                    return { success: true, message: 'No grid elements to remove' };
+                }
+                
+                const elements = Array.from(editor.context.insertionParent.children);
+                let removedCount = 0;
+                
+                for (const elementId of gridElementIds) {
+                    const element = elements.find(el => el.id === elementId);
+                    if (element) {
+                        element.removeFromParent();
+                        removedCount++;
+                    }
+                }
+                
+                console.log('Removed', removedCount, 'grid elements');
+                
+                return {
+                    success: true,
+                    removedCount: removedCount,
+                    message: `Removed ${removedCount} grid elements`
+                };
+                
+            } catch (error) {
+                console.error('Failed to remove grid overlay:', error);
+                return {
+                    success: false,
+                    message: 'Failed to remove grid overlay: ' + error.message
+                };
+            }
         }
     };
 

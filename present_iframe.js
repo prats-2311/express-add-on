@@ -24,6 +24,7 @@ class PrecisionToolkit {
         this.snapTolerance = 10;
         this.layerList = [];
         this.selectedLayerId = null;
+        this.currentGridElementIds = []; // Store grid element IDs for removal
     }
 
     async init() {
@@ -1783,20 +1784,20 @@ class PrecisionToolkit {
         const gridOpacitySlider = document.getElementById('grid-opacity');
         const gridOpacityValue = document.getElementById('grid-opacity-value');
         
-        gridSizeInput?.addEventListener('input', (e) => {
+        gridSizeInput?.addEventListener('input', async (e) => {
             this.gridSize = parseInt(e.target.value);
-            this.updateGridDisplay();
+            await this.updateGridDisplay();
         });
         
-        gridOpacitySlider?.addEventListener('input', (e) => {
+        gridOpacitySlider?.addEventListener('input', async (e) => {
             this.gridOpacity = parseInt(e.target.value) / 100;
             gridOpacityValue.textContent = e.target.value + '%';
-            this.updateGridDisplay();
+            await this.updateGridDisplay();
         });
         
         // Toggle buttons
-        document.getElementById('toggle-grid')?.addEventListener('click', () => {
-            this.toggleGrid();
+        document.getElementById('toggle-grid')?.addEventListener('click', async () => {
+            await this.toggleGrid();
         });
         
         document.getElementById('toggle-rulers')?.addEventListener('click', () => {
@@ -1825,13 +1826,23 @@ class PrecisionToolkit {
             this.debugCanvasDetection();
         });
         
+        // API test button
+        const apiTestBtn = document.createElement('button');
+        apiTestBtn.textContent = '🧪 Test API';
+        apiTestBtn.className = 'small-btn';
+        apiTestBtn.style.marginTop = '8px';
+        apiTestBtn.addEventListener('click', () => {
+            this.testPhase1API();
+        });
+        
         const gridSection = document.querySelector('.section h3');
         if (gridSection && gridSection.textContent.includes('Visual Rulers')) {
             gridSection.parentNode.appendChild(debugBtn);
+            gridSection.parentNode.appendChild(apiTestBtn);
         }
     }
     
-    toggleGrid() {
+    async toggleGrid() {
         this.gridEnabled = !this.gridEnabled;
         const btn = document.getElementById('toggle-grid');
         
@@ -1842,7 +1853,7 @@ class PrecisionToolkit {
         } else {
             btn.classList.remove('active');
             btn.textContent = '🔲 Show Grid';
-            this.hideGrid();
+            await this.hideGrid();
         }
         
         this.showStatusMessage(`Grid ${this.gridEnabled ? 'enabled' : 'disabled'}`);
@@ -1884,19 +1895,52 @@ class PrecisionToolkit {
         // Remove existing grid
         this.hideGrid();
         
-        // Create grid overlay
+        // Since we're in an add-on iframe and can't overlay the main canvas directly,
+        // we'll use the Adobe Express API to create a grid on the actual canvas
+        this.createAPIBasedGrid();
+    }
+    
+    async createAPIBasedGrid() {
+        try {
+            // Use the Adobe Express API to create grid elements on the actual canvas
+            const result = await this.sandboxProxy.createGridOverlay(this.gridSize, this.gridOpacity);
+            
+            if (result && result.success) {
+                // Store grid element IDs for later removal
+                this.currentGridElementIds = result.gridElementIds || [];
+                
+                this.showStatusMessage(`Grid overlay created on canvas (${this.gridSize}px grid)`, 'success');
+                
+                // Update button state
+                const gridBtn = document.getElementById('toggle-grid');
+                if (gridBtn) {
+                    gridBtn.textContent = '🔲 Hide Grid';
+                    gridBtn.classList.add('active');
+                }
+            } else {
+                // Fallback to iframe-based grid if API method doesn't exist
+                this.createIframeGrid();
+            }
+        } catch (error) {
+            console.log('API-based grid not available, using iframe grid:', error.message);
+            this.createIframeGrid();
+        }
+    }
+    
+    createIframeGrid() {
+        // Create grid overlay within our iframe (visible over add-on panel)
         const gridOverlay = document.createElement('div');
         gridOverlay.id = 'grid-overlay';
         gridOverlay.className = 'grid-overlay';
         
-        // Use a more visible grid pattern with higher opacity
+        // Use a more visible grid pattern
         const gridColor = `rgba(0, 100, 200, ${Math.max(0.3, this.gridOpacity)})`;
         const gridPattern = `
             linear-gradient(to right, ${gridColor} 1px, transparent 1px),
             linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)
         `;
         
-        // Apply base styles - always cover full viewport initially
+        // Apply styles for iframe grid
         Object.assign(gridOverlay.style, {
             position: 'fixed',
             top: '0',
@@ -1909,64 +1953,41 @@ class PrecisionToolkit {
             zIndex: '9999'
         });
         
-        // Try to find and position over canvas
-        const canvasContainer = this.findCanvasContainer();
-        if (canvasContainer) {
-            const rect = canvasContainer.getBoundingClientRect();
-            console.log('Positioning grid over canvas:', rect);
-            
-            // Position grid over the canvas area
-            Object.assign(gridOverlay.style, {
-                top: rect.top + 'px',
-                left: rect.left + 'px',
-                width: rect.width + 'px',
-                height: rect.height + 'px'
-            });
-            
-            this.showStatusMessage(`Grid positioned over canvas (${Math.round(rect.width)}×${Math.round(rect.height)})`, 'success');
-        } else {
-            this.showStatusMessage('Grid shown over entire window - canvas not detected', 'warning');
-        }
-        
         document.body.appendChild(gridOverlay);
         
-        // Update grid position on window changes
-        this.gridResizeHandler = () => {
-            if (canvasContainer) {
-                const rect = canvasContainer.getBoundingClientRect();
-                Object.assign(gridOverlay.style, {
-                    top: rect.top + 'px',
-                    left: rect.left + 'px',
-                    width: rect.width + 'px',
-                    height: rect.height + 'px'
-                });
-            }
-        };
+        this.showStatusMessage('Grid shown in add-on panel (demo mode)', 'warning');
         
-        window.addEventListener('resize', this.gridResizeHandler);
-        window.addEventListener('scroll', this.gridResizeHandler);
-        
-        // Verify grid is visible
-        setTimeout(() => {
-            const gridElement = document.getElementById('grid-overlay');
-            if (gridElement) {
-                const computedStyle = window.getComputedStyle(gridElement);
-                console.log('Grid element styles:', {
-                    display: computedStyle.display,
-                    visibility: computedStyle.visibility,
-                    opacity: computedStyle.opacity,
-                    zIndex: computedStyle.zIndex,
-                    position: computedStyle.position,
-                    backgroundImage: computedStyle.backgroundImage
-                });
-            }
-        }, 100);
+        // Update button state
+        const gridBtn = document.getElementById('toggle-grid');
+        if (gridBtn) {
+            gridBtn.textContent = '🔲 Hide Grid';
+            gridBtn.classList.add('active');
+        }
     }
     
-    hideGrid() {
+    async hideGrid() {
+        // Remove iframe-based grid overlay
         const existingGrid = document.getElementById('grid-overlay');
         if (existingGrid) {
             existingGrid.remove();
+        }
+        
+        // Remove API-based grid elements from canvas
+        if (this.currentGridElementIds.length > 0) {
+            try {
+                const result = await this.sandboxProxy.removeGridOverlay(this.currentGridElementIds);
+                if (result && result.success) {
+                    this.showStatusMessage(`Grid removed from canvas (${result.removedCount} elements)`, 'success');
+                } else {
+                    this.showStatusMessage('Failed to remove grid from canvas', 'error');
+                }
+            } catch (error) {
+                console.log('Failed to remove grid elements:', error);
+                this.showStatusMessage('Failed to remove grid from canvas', 'error');
+            }
+            
+            // Clear the stored grid element IDs
+            this.currentGridElementIds = [];
         }
         
         // Clean up event listeners
@@ -1978,60 +1999,77 @@ class PrecisionToolkit {
     }
     
     findCanvasContainer() {
-        // Try to find the Adobe Express canvas container
-        // Look for common selectors that might contain the canvas
-        const selectors = [
-            '[data-testid="canvas-container"]',
-            '[data-testid="canvas"]',
-            '.canvas-container',
-            '.artboard',
-            '.design-canvas',
-            'canvas',
-            '[role="img"]',
-            '.workspace-canvas'
-        ];
+        // Since we're in an add-on iframe, we need to target the parent window's canvas
+        // The grid should appear on the main Adobe Express canvas, not in our add-on panel
         
-        for (const selector of selectors) {
-            const element = document.querySelector(selector);
-            if (element) {
-                // Verify it's likely the main canvas by checking size
-                const rect = element.getBoundingClientRect();
-                if (rect.width > 200 && rect.height > 200) {
-                    console.log('Found canvas container:', selector, rect);
-                    return element;
+        try {
+            // Try to access parent window (Adobe Express main window)
+            if (window.parent && window.parent !== window) {
+                const parentDoc = window.parent.document;
+                
+                // Adobe Express specific selectors
+                const selectors = [
+                    '[data-testid="canvas-container"]',
+                    '[data-testid="canvas"]',
+                    '[data-testid="artboard"]',
+                    '.canvas-container',
+                    '.artboard',
+                    '.design-canvas',
+                    '.workspace-canvas',
+                    '[role="img"][aria-label*="canvas"]',
+                    '[role="img"][aria-label*="artboard"]'
+                ];
+                
+                for (const selector of selectors) {
+                    const element = parentDoc.querySelector(selector);
+                    if (element) {
+                        const rect = element.getBoundingClientRect();
+                        if (rect.width > 200 && rect.height > 200) {
+                            console.log('Found parent canvas:', selector, rect);
+                            return { element, isParent: true };
+                        }
+                    }
+                }
+                
+                // Look for large elements in parent that could be canvas
+                const parentElements = parentDoc.querySelectorAll('div, canvas, svg');
+                let largestElement = null;
+                let largestArea = 0;
+                
+                for (const element of parentElements) {
+                    const rect = element.getBoundingClientRect();
+                    const area = rect.width * rect.height;
+                    
+                    // Look for canvas-like elements
+                    if (area > largestArea && 
+                        rect.width > 400 && 
+                        rect.height > 300 && 
+                        rect.width < window.parent.innerWidth * 0.9 &&
+                        rect.height < window.parent.innerHeight * 0.9) {
+                        largestArea = area;
+                        largestElement = element;
+                    }
+                }
+                
+                if (largestElement) {
+                    console.log('Found parent canvas by size:', largestElement.getBoundingClientRect());
+                    return { element: largestElement, isParent: true };
                 }
             }
+        } catch (error) {
+            console.log('Cannot access parent window (cross-origin):', error.message);
         }
         
-        // Fallback: look for the largest element that might be the canvas
-        const allElements = document.querySelectorAll('div, canvas, svg');
-        let largestElement = null;
-        let largestArea = 0;
-        
-        for (const element of allElements) {
-            const rect = element.getBoundingClientRect();
-            const area = rect.width * rect.height;
-            
-            // Look for elements that are likely the main canvas
-            if (area > largestArea && 
-                rect.width > 300 && 
-                rect.height > 300 && 
-                rect.width < window.innerWidth * 0.8 &&
-                rect.height < window.innerHeight * 0.8) {
-                largestArea = area;
-                largestElement = element;
-            }
-        }
-        
-        if (largestElement) {
-            console.log('Found canvas by size:', largestElement, largestElement.getBoundingClientRect());
-        }
-        
-        return largestElement;
+        // Fallback: return null to indicate we should use a different approach
+        console.log('Canvas detection failed - will use alternative grid approach');
+        return null;
     }
     
-    updateGridDisplay() {
+    async updateGridDisplay() {
         if (this.gridEnabled) {
+            // Remove existing grid first
+            await this.hideGrid();
+            // Create new grid with updated settings
             this.showGrid();
         }
     }
@@ -2175,6 +2213,140 @@ class PrecisionToolkit {
         this.showStatusMessage('Test grid shown for 5 seconds (red lines)', 'info');
     }
     
+    async testPhase1API() {
+        console.log('=== PHASE 1 API TEST ===');
+        this.showStatusMessage('Testing Phase 1 API methods...', 'info');
+        
+        const results = [];
+        
+        // Test Layer Management APIs
+        const layerMethods = [
+            'getAllLayers',
+            'selectLayerById', 
+            'deleteLayerById',
+            'toggleLayerVisibility',
+            'createBlankLayer',
+            'duplicateSelectedElements'
+        ];
+        
+        // Test Smart Alignment APIs
+        const alignmentMethods = [
+            'alignToCanvasCenter',
+            'distributeElementsEvenly',
+            'alignToMargins'
+        ];
+        
+        // Check if methods exist
+        console.log('Checking Layer Management methods:');
+        layerMethods.forEach(method => {
+            const exists = typeof this.sandboxProxy[method] === 'function';
+            console.log(`- ${method}: ${exists ? '✅ Available' : '❌ Missing'}`);
+            results.push(`${method}: ${exists ? '✅' : '❌'}`);
+        });
+        
+        console.log('Checking Smart Alignment methods:');
+        alignmentMethods.forEach(method => {
+            const exists = typeof this.sandboxProxy[method] === 'function';
+            console.log(`- ${method}: ${exists ? '✅ Available' : '❌ Missing'}`);
+            results.push(`${method}: ${exists ? '✅' : '❌'}`);
+        });
+        
+        // Test version check first
+        try {
+            console.log('Testing getPhase1Version...');
+            if (this.sandboxProxy.getPhase1Version) {
+                const version = await this.sandboxProxy.getPhase1Version();
+                console.log('Version check result:', version);
+                results.push(`Backend Version: ✅ ${version.version} (${new Date(version.timestamp).toLocaleTimeString()})`);
+            } else {
+                results.push('Backend Version: ❌ Old version - RELOAD NEEDED');
+            }
+        } catch (error) {
+            console.error('Version check failed:', error);
+            results.push(`Backend Version: ❌ Error - ${error.message}`);
+        }
+
+        // Test canvas bounds detection
+        try {
+            console.log('Testing getCanvasBounds...');
+            if (this.sandboxProxy.getCanvasBounds) {
+                const bounds = await this.sandboxProxy.getCanvasBounds();
+                console.log('getCanvasBounds result:', bounds);
+                results.push(`Canvas Bounds: ✅ ${bounds.width}x${bounds.height}`);
+            } else {
+                results.push('Canvas Bounds: ❌ Method not available');
+            }
+        } catch (error) {
+            console.error('getCanvasBounds test failed:', error);
+            results.push(`Canvas Bounds: ❌ Error - ${error.message}`);
+        }
+
+        // Test a simple method call
+        try {
+            console.log('Testing getAllLayers...');
+            if (this.sandboxProxy.getAllLayers) {
+                const layers = await this.sandboxProxy.getAllLayers();
+                console.log('getAllLayers result:', layers);
+                results.push(`getAllLayers call: ✅ Success (${layers.length} layers)`);
+            } else {
+                results.push('getAllLayers call: ❌ Method not available');
+            }
+        } catch (error) {
+            console.error('getAllLayers test failed:', error);
+            results.push(`getAllLayers call: ❌ Error - ${error.message}`);
+        }
+        
+        // Display results
+        const resultText = results.join('\n');
+        console.log('API Test Results:\n' + resultText);
+        
+        // Show summary
+        const availableCount = results.filter(r => r.includes('✅')).length;
+        const totalCount = layerMethods.length + alignmentMethods.length + 1; // +1 for the test call
+        
+        if (availableCount === totalCount) {
+            this.showStatusMessage(`✅ All ${totalCount} Phase 1 API methods available!`, 'success');
+        } else if (availableCount > 0) {
+            this.showStatusMessage(`⚠️ ${availableCount}/${totalCount} Phase 1 API methods available`, 'warning');
+        } else {
+            this.showStatusMessage('❌ Phase 1 API methods not available - reload add-on', 'error');
+        }
+        
+        // Create a temporary results display
+        const resultsDiv = document.createElement('div');
+        resultsDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 2px solid #007acc;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 10000;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-line;
+        `;
+        resultsDiv.innerHTML = `
+            <h3>🧪 Phase 1 API Test Results</h3>
+            <div style="margin: 10px 0;">${resultText}</div>
+            <button onclick="this.parentElement.remove()" style="background: #007acc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Close</button>
+        `;
+        
+        document.body.appendChild(resultsDiv);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (resultsDiv.parentElement) {
+                resultsDiv.remove();
+            }
+        }, 10000);
+    }
+    
     // Layer Management Panel
     setupLayerManagement() {
         // Refresh layers button
@@ -2206,13 +2378,23 @@ class PrecisionToolkit {
     
     async refreshLayerList() {
         try {
+            // Check if the method exists
+            if (!this.sandboxProxy.getAllLayers) {
+                console.error('getAllLayers method not available in sandboxProxy');
+                this.showStatusMessage('Layer management not available - please reload add-on', 'error');
+                return;
+            }
+            
+            console.log('Calling getAllLayers...');
             const layers = await this.sandboxProxy.getAllLayers();
+            console.log('Received layers:', layers);
+            
             this.layerList = layers;
             this.displayLayerList(layers);
             this.showStatusMessage(`Found ${layers.length} layers`);
         } catch (error) {
             console.error('Failed to refresh layers:', error);
-            this.showStatusMessage('Failed to refresh layers', 'error');
+            this.showStatusMessage('Failed to refresh layers - try reloading add-on', 'error');
         }
     }
     
@@ -2308,18 +2490,31 @@ class PrecisionToolkit {
         try {
             switch (action) {
                 case 'select':
-                    await this.sandboxProxy.selectLayerById(layerId);
+                    if (!this.sandboxProxy.selectLayerById) {
+                        this.showStatusMessage('Layer selection not available - please reload add-on', 'error');
+                        return;
+                    }
+                    console.log('Selecting layer:', layerId);
+                    const selectResult = await this.sandboxProxy.selectLayerById(layerId);
+                    console.log('Select result:', selectResult);
                     this.selectLayer(layerId);
+                    this.showStatusMessage('Layer selected');
                     break;
                 case 'delete':
-                    await this.sandboxProxy.deleteLayerById(layerId);
+                    if (!this.sandboxProxy.deleteLayerById) {
+                        this.showStatusMessage('Layer deletion not available - please reload add-on', 'error');
+                        return;
+                    }
+                    console.log('Deleting layer:', layerId);
+                    const deleteResult = await this.sandboxProxy.deleteLayerById(layerId);
+                    console.log('Delete result:', deleteResult);
                     this.refreshLayerList();
                     this.showStatusMessage('Layer deleted');
                     break;
             }
         } catch (error) {
             console.error(`Failed to ${action} layer:`, error);
-            this.showStatusMessage(`Failed to ${action} layer`, 'error');
+            this.showStatusMessage(`Failed to ${action} layer - try reloading add-on`, 'error');
         }
     }
     
