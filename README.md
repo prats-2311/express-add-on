@@ -1,20 +1,14 @@
 <p align=center>
-  <img src=https://img.shields.io/badge/node-v10.16.0-brightgreen.svg?style=flat-square alt="node" />
-  <img src=https://img.shields.io/badge/npm-v5.6.0-blue.svg?style=flat-square alt="npm" />
   <a href=./LICENSE>
     <img src=https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square alt="License: MIT" />
   </a>
   <a href=./CONTRIBUTING.md>
     <img src=https://img.shields.io/badge/contributions-welcome-orange.svg?style=flat-square alt="Contributions Welcome" />
   </a>
-  <a href=https://vercel.com?utm_source=vetswhocode.io&utm_campaign=oss>
-    <img src=https://img.shields.io/badge/Powered_by-Vercel-black?style=flat-square alt="Powered by Vercel">
-  </a>
+
 </p>
 
-<p align=center>
-  <img src=https://avatars1.githubusercontent.com/u/18350560?s=200&v=4 alt="VWC Logo" />
-</p>
+
 
 # Adobe Express Code Playground Toolkit
 
@@ -30,23 +24,7 @@ These instructions will get you a copy of the project up and running on your loc
 You will need the following properly installed on your computer.
 
 - [Git](http://git-scm.com/)
-- [Node](http://nodejs.org/)
-- [NVM](https://github.com/creationix/nvm)
 - [Adobe Express](https://express.adobe.com/)
-
-## Installing
-
-In a terminal window run these commands.
-
-```sh
-$ git clone https://github.com/your-repo/adobe-express-toolkit.git
-$ cd adobe-express-toolkit
-$ nvm install
-$ npm install
-$ npm run dev
-```
-
-You should be able to view the toolkit locally at `http://localhost:3000/`.
 
 ### How to Use in Adobe Express Code Playground
 
@@ -119,40 +97,7 @@ You should be able to view the toolkit locally at `http://localhost:3000/`.
 4. Create text effects for headlines
 5. Export organized asset library
 
-### Add necessary api keys to your new `.env` file.
 
-## Testing
-
-In a terminal window run these commands.
-
-```sh
-$ cd adobe-express-toolkit
-$ npm run test
-```
-
-<br>
-
-In a terminal window run these commands to run the jest test suite in watch mode.
-
-```sh
-$ cd adobe-express-toolkit
-$ npm run test:watch
-```
-
-In a terminal window run these commands to view the jest coverage report.
-
-```sh
-$ cd adobe-express-toolkit
-$ npm run test:coverage
-$ npm run view:coverage
-```
-
-In a terminal window run these commands if you need to update a snapshot.
-
-```sh
-$ cd adobe-express-toolkit
-$ npm run test -- --updateSnapshot
-```
 
 ## Contributing
 
