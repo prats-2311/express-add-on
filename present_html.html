@@ -113,6 +113,102 @@
                 </div>
             </div>
 
+            <!-- Visual Rulers & Grid System -->
+            <div class="section" id="rulers-grid-section">
+                <h3>📐 Visual Rulers & Grid System</h3>
+                <div class="control-group">
+                    <label>Grid Settings:</label>
+                    <div class="grid-controls">
+                        <div class="control-item">
+                            <label>Grid Size:</label>
+                            <input type="number" id="grid-size" value="20" min="5" max="100" step="5">
+                            <span>px</span>
+                        </div>
+                        <div class="control-item">
+                            <label>Grid Opacity:</label>
+                            <input type="range" id="grid-opacity" min="0" max="100" value="30">
+                            <span id="grid-opacity-value">30%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="button-group">
+                        <button id="toggle-grid" class="toggle-btn">🔲 Show Grid</button>
+                        <button id="toggle-rulers" class="toggle-btn">📏 Show Rulers</button>
+                        <button id="toggle-snap" class="toggle-btn">🧲 Snap to Grid</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Measurement Tools:</label>
+                    <div class="button-group">
+                        <button id="measure-distance">📐 Measure Distance</button>
+                        <button id="show-dimensions">📊 Show Dimensions</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layer Management Panel -->
+            <div class="section" id="layer-management-section">
+                <h3>🗂️ Layer Management</h3>
+                <div class="control-group">
+                    <div class="button-group">
+                        <button id="refresh-layers">🔄 Refresh Layers</button>
+                        <button id="create-blank-layer">➕ Create Blank Layer</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Layer List:</label>
+                    <div style="font-size: 11px; color: #666; margin-bottom: 8px;">
+                        ℹ️ Click to highlight layer info • Manual selection required in Adobe Express canvas
+                    </div>
+                    <div id="layer-list" class="layer-list">
+                        <div class="layer-placeholder">No layers detected</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Layer Actions:</label>
+                    <div class="button-group">
+                        <button id="group-selected">📁 Group Selected</button>
+                        <button id="ungroup-selected">📂 Ungroup Selected</button>
+                        <button id="duplicate-layer">📋 Duplicate Layer</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Smart Alignment Guides -->
+            <div class="section" id="smart-guides-section">
+                <h3>🎯 Smart Alignment Guides</h3>
+                <div class="control-group">
+                    <div class="button-group">
+                        <button id="toggle-smart-guides" class="toggle-btn">✨ Smart Guides</button>
+                        <button id="toggle-center-guides" class="toggle-btn">🎯 Center Guides</button>
+                        <button id="toggle-margin-guides" class="toggle-btn">📏 Margin Guides</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Guide Settings:</label>
+                    <div class="guide-controls">
+                        <div class="control-item">
+                            <label>Guide Color:</label>
+                            <input type="color" id="guide-color" value="#ff0066">
+                        </div>
+                        <div class="control-item">
+                            <label>Snap Tolerance:</label>
+                            <input type="number" id="snap-tolerance" value="10" min="1" max="50">
+                            <span>px</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Quick Alignment:</label>
+                    <div class="button-group">
+                        <button id="align-to-canvas-center">🎯 Center to Canvas</button>
+                        <button id="distribute-evenly">📐 Distribute Evenly</button>
+                        <button id="align-to-margins">📏 Align to Margins</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Granular Controls -->
             <div class="section" id="granular-section">
                 <h3>⚙️ Granular Control</h3>
